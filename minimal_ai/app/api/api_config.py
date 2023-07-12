@@ -9,7 +9,6 @@ class Settings(BaseSettings):
     """Settings class which extends BaseSettings
     """
     API_STR: str = "/api/v1"
-    OPEN_API_KEY: str = "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"
     SECRET_KEY: str = secrets.token_urlsafe(32)
     REPO_PATH: str = os.path.join(os.getcwd())
     PIPELINES_DIR: str = os.path.join(os.getcwd(), 'pipelines')
