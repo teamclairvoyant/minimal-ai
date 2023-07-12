@@ -35,7 +35,7 @@ class Settings(BaseSettings):
             return urls
         raise ValueError(urls)
 
-    PROJECT_NAME: str = "minimal-etl"
+    PROJECT_NAME: str = "minimal-ai"
     # scheduler settings
     SCHEDULER_DB_DIR: str = os.path.join(PIPELINES_DIR, 'scheduler')
     THREAD_POOL_EXECUTOR: int = 20

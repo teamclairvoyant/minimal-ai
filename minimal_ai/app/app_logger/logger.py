@@ -1,10 +1,12 @@
 import logging
 import logging.config
 from datetime import datetime
-
+import os
 
 def setup_logging(log_dir: str):
     """Load logging configuration"""
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
 
     log_file_name = log_dir + '/' + 'minimal-app-' + \
         datetime.now().strftime("%Y-%m-%d") + '.log'
