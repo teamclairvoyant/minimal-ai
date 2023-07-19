@@ -7,8 +7,7 @@ from minimal_ai.app.services.minimal_exception import MinimalETLException
 from minimal_ai.app.services.pipeline_scheduler import schedule_pipeline
 from minimal_ai.app.services.pipeline_service import PipelineService
 from minimal_ai.app.services.task_service import TaskService
-from minimal_ai.app.utils.constants import (CronModel, ExecutorType,
-                                            PipelineModel, TaskModel)
+from minimal_ai.app.utils.constants import CronModel, PipelineModel, TaskModel
 
 api_router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -77,7 +76,7 @@ async def add_pipeline(pipeline_config: PipelineModel) -> JSONResponse:
     try:
         logger.info("POST /pipeline %s", pipeline_config.name)
         pipeline = PipelineService.create_pipeline(
-            pipeline_config.name, ExecutorType(pipeline_config.executor_type))
+            pipeline_config.name, pipeline_config.executor_config)
         return JSONResponse(status_code=status.HTTP_201_CREATED,
                             content={"pipeline": pipeline})
     except MinimalETLException as excep:
@@ -186,31 +185,6 @@ async def update_task(pipeline_uuid: str, task_uuid: str,
         return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"error": excep.args})
 
 
-@api_router.get("/pipeline/{pipeline_uuid}/task/{task_uuid}/execute")
-async def execute_task(pipeline_uuid: str, task_uuid: str,
-                       show_sample: bool = False,
-                       sample_count: int = 0) -> JSONResponse:
-    """ endpoint to execute task
-    Args:
-        pipeline_uuid (str): uuid of pipeline
-        task_uuid (str): uuid of task
-        show_sample (bool): whether to show sample data
-        sample_count (int): number of rows of the output
-
-    """
-    try:
-        logger.info("GET /pipeline/%s/task/%s/execute",
-                    pipeline_uuid, task_uuid)
-        task_data = await TaskService.execute_task_by_uuid(pipeline_uuid, task_uuid, show_sample, sample_count)
-        return JSONResponse(status_code=status.HTTP_200_OK,
-                            content={"execution_details": task_data})
-
-    except MinimalETLException as excep:
-        logger.error("GET /pipeline/%s/task/%s/execute | %s",
-                     pipeline_uuid, task_uuid, excep.args)
-        return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"error": excep.args})
-
-
 @api_router.get("/pipeline/{pipeline_uuid}/execute")
 async def execute_pipeline(pipeline_uuid: str) -> JSONResponse:
     """endpoint to trigger pipline execution
@@ -227,29 +201,6 @@ async def execute_pipeline(pipeline_uuid: str) -> JSONResponse:
 
     except MinimalETLException as excep:
         logger.error("/pipeline/%s/execute | %s", pipeline_uuid, excep.args)
-        return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"error": excep.args})
-
-
-@api_router.get("/pipeline/{pipeline_uuid}/task/{task_uuid}/get_data")
-async def get_task_data(pipeline_uuid: str, task_uuid: str, sample_count: int = 5) -> JSONResponse:
-    """
-    endpoint to fetch data from executed task
-    Args:
-        pipeline_uuid (str): uuid of the pipeline
-        task_uuid (str): uuid of task
-        sample_count (int) : number of data rows
-
-    """
-    try:
-        logger.info("GET /pipeline/%s/task/%s/get_data",
-                    pipeline_uuid, task_uuid)
-        task_data = await TaskService.get_data_by_task(pipeline_uuid, task_uuid, sample_count)
-        return JSONResponse(status_code=status.HTTP_200_OK,
-                            content={'task_data': task_data})
-
-    except MinimalETLException as excep:
-        logger.error("GET /pipeline/%s/task/%s/get_data | %s",
-                     pipeline_uuid, task_uuid, excep.args)
         return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"error": excep.args})
 
 

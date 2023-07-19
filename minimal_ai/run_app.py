@@ -7,7 +7,7 @@ from minimal_ai.app.api.api_config import settings
 from minimal_ai.app.app_logger.logger import setup_logging
 from minimal_ai.app.utils import excel_to_json
 from minimal_ai.app.services import PipelineService
-
+from minimal_ai.run_server import start
 
 REPO_PATH_ENV_VAR = 'MINIMAL_REPO_PATH'
 VARIABLE_DIR = '.variable'
@@ -24,7 +24,7 @@ sys.path.append(os.path.dirname(settings.PIPELINES_DIR))
 
 @app.callback()
 def callback():
-    """main script to run and execute minimal_ai
+    """main script to initiate and execute minimal_ai
     """
 
 @app.command()
@@ -37,6 +37,8 @@ def init_app():
     else:
         os.makedirs(settings.PIPELINES_DIR)
         logger.info("Created directory at - %s", settings.PIPELINES_DIR)
+
+    start()
 
 
 @app.command()

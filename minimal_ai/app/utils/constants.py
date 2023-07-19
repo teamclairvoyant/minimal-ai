@@ -22,13 +22,6 @@ class TaskStatus(str, Enum):
     UPDATED = 'updated'
 
 
-class ExecutorType(str, Enum):
-    """ Executor to choose between local python or pyspark
-    """
-    PYTHON = 'python'
-    PYSPARK = 'pyspark'
-
-
 class PipelineType(str, Enum):
     """
         Pipeline type to choose between pandas and pyspark
@@ -65,14 +58,13 @@ class TaskModel(BaseModel):
     task_type: str
     priority: int
     upstream_task_uuids: List[str] | None = None
-    executor_config: dict | None = None
 
 
 class PipelineModel(BaseModel):
     """ Model class to define pipeline
     """
     name: str
-    executor_type: str
+    executor_config: Dict[Any, Any]
 
 
 class VariableType(str, Enum):
@@ -100,6 +92,7 @@ class TransformerType(str, Enum):
     UNION = 'union'
     PIVOT = 'pivot'
     FILTER = 'filter'
+    SPARKAI = 'sparkAI'
 
 
 class JoinModel(BaseModel):
@@ -108,15 +101,14 @@ class JoinModel(BaseModel):
     """
     left_table: str
     right_table: str
-    left_on: List[str]
-    right_on: List[str]
+    on: List[str]
     how: str
 
 
 class FilterModel(BaseModel):
     """properties for filter transformer
     """
-    where: str
+    prompt: str
 
 
 class PivotModel(BaseModel):
@@ -130,7 +122,6 @@ class PivotModel(BaseModel):
 class TaskUpdateModel(BaseModel):
     """ properties of task to be updated
     """
-    executor_config: Dict[str, Any] | None = None
     upstream_task_uuids: List[str] | None = None
     config_type: str | None = None
     config_properties: Dict[str, Any] | None = None

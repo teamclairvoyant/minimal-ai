@@ -2,13 +2,15 @@ import logging
 import os
 import pickle
 from typing import Any
-
+from pyspark.sql.types import StructType
+from pyspark.sql import DataFrame
+from pyspark.sql import SparkSession
 import aiofiles
 import polars as pl
 from pydantic.dataclasses import dataclass
 
 from minimal_ai.app.services.minimal_exception import MinimalETLException
-from minimal_ai.app.utils.constants import VariableType
+
 from minimal_ai.app.utils.string_utils import clean_name
 
 logger = logging.getLogger(__name__)
@@ -36,7 +38,7 @@ class VariableManager:
             task_uuid: str,
             variable_uuid: str,
             data: Any,
-            variable_type: VariableType
+            data_schema: StructType
     ) -> None:
         """
         method to add variable and store data
@@ -45,14 +47,14 @@ class VariableManager:
             task_uuid (): uuid of the task
             variable_uuid (): uuid of the variable
             data (): dataframe
-            variable_type (): type of the variable
+            data_schema (StructType): type of the variable
 
         """
         variable = Variable(
             uuid=clean_name(variable_uuid),
             pipeline_uuid=pipeline_uuid,
             task_uuid=task_uuid,
-            type=variable_type,
+            data_schema=data_schema,
             data=data
         )
         # Delete data if it exists
@@ -80,7 +82,7 @@ class VariableManager:
             self,
             variable_uuid: str,
             sample_count: int | None = None
-    ) -> pl.DataFrame:
+    ) -> 'Variable':
         """
         method to get variable object
         Args:
@@ -95,19 +97,25 @@ class VariableManager:
             raise MinimalETLException(
                 f'Variable - {variable_uuid} not loaded properly')
 
+        spark_sess = SparkSession.getActiveSession()
+        _df: DataFrame = spark_sess.createDataFrame(data=variable.data,schema=variable.data_schema)
+
         if sample_count is not None:
             if isinstance(variable.data, pl.DataFrame):
                 return variable.data.head(sample_count)
 
-        return variable.data
+        return _df
 
 
-@dataclass
+class Config:
+    arbitrary_types_allowed = True
+
+@dataclass(config=Config)
 class Variable:
     uuid: str
     pipeline_uuid: str
     task_uuid: str
-    type: VariableType
+    data_schema: StructType
     data: Any
 
     @classmethod

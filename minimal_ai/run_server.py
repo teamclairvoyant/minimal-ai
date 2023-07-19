@@ -20,8 +20,7 @@ setup_logging(settings.LOG_DIR)
 logger = logging.getLogger(__name__)
 
 
-scheduler = {}
-
+services = {}
 
 @asynccontextmanager
 async def lifespan_event(app: FastAPI):
@@ -31,14 +30,14 @@ async def lifespan_event(app: FastAPI):
     sys.path.append(os.path.dirname(settings.PIPELINES_DIR))
     # Load the scheduler instance
     logger.info("Initialising scheduler instance")
-    scheduler['obj'] = get_scheduler_obj()
+    services['scheduler'] = get_scheduler_obj()
 
-    start_scheduler(scheduler['obj'])
+    start_scheduler(services['scheduler'])
     # loop = asyncio.get_event_loop()
     # loop.run_forever()
     yield
     # Clean up the ML models and release the resources
-    stop_scheduler(scheduler['obj'])
+    stop_scheduler(services['scheduler'])
 
 
 app = FastAPI(

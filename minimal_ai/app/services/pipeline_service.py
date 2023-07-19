@@ -3,7 +3,7 @@ import logging
 from typing import Dict, List
 
 from minimal_ai.app.models.pipeline import Pipeline
-from minimal_ai.app.utils import ExecutorType, TaskType
+from minimal_ai.app.utils import TaskType
 
 logger = logging.getLogger(__name__)
 
@@ -11,17 +11,17 @@ logger = logging.getLogger(__name__)
 class PipelineService:
 
     @staticmethod
-    def create_pipeline(name: str, executor_type: ExecutorType) -> Dict:
+    def create_pipeline(name: str, executor_config: Dict[str, str]) -> Dict:
         """method to create the pipeline
 
         Args:
             name (str): name of the pipeline
-            executor_type (ExecutorType): type of the executor
+            executor_config (Dict[str,str]): spark configurations
 
         Returns:
             Dict: created pipeline object
         """
-        pipeline = Pipeline.create(name, executor_type)
+        pipeline = Pipeline.create(name, executor_config)
         logger.info("Pipeline - %s created", name)
         return pipeline.base_obj()
 

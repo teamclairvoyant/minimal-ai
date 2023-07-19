@@ -1,4 +1,4 @@
-ID,  Amount, Salary, Ratio, Age,  Occupation,   Property,  Type,  Outcome
+"ID",Amount,Salary,Ratio,Age,Occupation,Property,Type,Outcome
 1,245100,66400,3.69,44,  industrial,   farm,       stb,  repay
 2,90600,75300,1.2,41,  industrial,   farm,       stb,  repay
 3,195600,52100,3.75,37,  industrial,   farm,       ftb,  default

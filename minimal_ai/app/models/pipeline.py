@@ -3,7 +3,6 @@ import json
 import logging
 import os
 import shutil
-from enum import Enum
 from queue import Queue
 from typing import Any, Dict, List
 
@@ -15,8 +14,8 @@ from minimal_ai.app.api.api_config import settings
 from minimal_ai.app.models.task import Task
 from minimal_ai.app.models.variable import VariableManager
 from minimal_ai.app.services.minimal_exception import MinimalETLException
-from minimal_ai.app.utils.constants import (PIPELINES_FOLDER, ExecutorType,
-                                            ScheduleStatus)
+from minimal_ai.app.services.spark_main import SparkMain
+from minimal_ai.app.utils.constants import PIPELINES_FOLDER, ScheduleStatus
 from minimal_ai.app.utils.string_utils import clean_name, format_enum
 
 METADATA_FILE = 'metadata.json'
@@ -29,7 +28,7 @@ class Pipeline:
     uuid: str
     name: str | None = None
     tasks: Dict[Any, Any] = Field(default_factory=Dict)
-    executor_type: Enum = ExecutorType.PYTHON
+    executor_config: Dict[Any, Any] = Field(default_factory=Dict)
     config: Dict | None = None
     schedule_status: ScheduleStatus = ScheduleStatus.NOT_SCHEDULED
 
@@ -88,7 +87,7 @@ class Pipeline:
         """
         self.name = _config.get('name')
         self.uuid = _config.get('uuid')  # type: ignore
-        self.executor_type = ExecutorType(_config.get('executor_type'))
+        self.executor_config = _config.get('executor_config', {})
         self.tasks = _config.get('tasks', {})
         self.schedule_status = ScheduleStatus(_config.get('schedule_status'))
 
@@ -101,18 +100,18 @@ class Pipeline:
         return {
             "name": self.name,
             "uuid": self.uuid,
-            "executor_type": self.executor_type,
+            "executor_config": self.executor_config,
             "tasks": self.tasks,
             "schedule_status": self.schedule_status
         }
 
     @classmethod
-    def create(cls, name: str, executor_type: ExecutorType) -> 'Pipeline':
+    def create(cls, name: str, executor_config: Dict[str, str]) -> 'Pipeline':
         """
         method to create object pipeline class
         Args:
             name (str): name of the pipeline
-            executor_type (ExecutorType): executor type of the pipeline
+            executor_config (Dict): spark config of the pipeline
 
         Returns:
 
@@ -136,7 +135,7 @@ class Pipeline:
             json.dump({
                 "name": name,
                 "uuid": uuid,
-                "executor_type": format_enum(executor_type or ExecutorType.PYTHON),
+                "executor_config": executor_config,
                 "schedule_status": format_enum(ScheduleStatus.NOT_SCHEDULED)
             }, config_file, indent=4)
 
@@ -296,11 +295,11 @@ class Pipeline:
         def create_task(task_conf: Dict):
             async def build_and_execute():
                 task = Task.get_task_from_config(task_conf, self)
-                exec_data = await task.execute()
+                exec_data = await task.execute(spark)
                 self.tasks[task_conf['uuid']] = exec_data['task']
 
             return asyncio.create_task(build_and_execute())
-
+        spark, spark_config = SparkMain(self.uuid).start_spark()
         task_queue = Queue()
         executed_tasks = {}
         for _task in root_tasks:
@@ -333,4 +332,5 @@ class Pipeline:
         remaining_tasks = filter(
             lambda task: task is not None, executed_tasks.values())
         await asyncio.gather(*remaining_tasks)
+        spark.stop()
         self.save()
