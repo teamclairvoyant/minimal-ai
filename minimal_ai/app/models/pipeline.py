@@ -106,7 +106,7 @@ class Pipeline:
         }
 
     @classmethod
-    def create(cls, name: str, executor_config: Dict[str, str]) -> 'Pipeline':
+    def create(cls, name: str, executor_config: Dict[str, str] | None) -> 'Pipeline':
         """
         method to create object pipeline class
         Args:
@@ -135,7 +135,7 @@ class Pipeline:
             json.dump({
                 "name": name,
                 "uuid": uuid,
-                "executor_config": executor_config,
+                "executor_config": executor_config if executor_config else {},
                 "schedule_status": format_enum(ScheduleStatus.NOT_SCHEDULED)
             }, config_file, indent=4)
 

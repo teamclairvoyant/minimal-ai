@@ -45,7 +45,7 @@ class SparkSourceReaders:
                     f"currently this database {config['db_type']} is not supported")
 
     @staticmethod
-    def csv_reader(task_uuid: str, config: Dict, spark: SparkSession, file_path: str) -> None:
+    def csv_reader(task_uuid: str, config: Dict, spark: SparkSession) -> None:
         """ registers dataframe from csv source
 
         Args:
@@ -53,17 +53,17 @@ class SparkSourceReaders:
         """
 
         logger.info("Loading data from file - %s", config['file_name'])
-        _final_path = os.path.join(file_path, config['file_name'])
+        # _final_path = os.path.join(file_path, config['file_name'])
 
-        if not os.path.exists(_final_path):
-            logger.error('File path - %s does not exists', _final_path)
+        if not os.path.exists(config['file_name']):
+            logger.error('File path - %s does not exists', config['file_name'])
             raise MinimalETLException(
-                f'File path - {_final_path} does not exists')
+                f'File path - {config["file_name"]} does not exists')
 
         _options = {"delimiter": ",",
                     "header": True}
 
         spark.read.options(
-            **_options).csv(_final_path).createOrReplaceTempView(task_uuid)
+            **_options).csv(config['file_name']).createOrReplaceTempView(task_uuid)
         logger.info("Successfully created dataframe from CSV - %s",
                     config['file_name'])

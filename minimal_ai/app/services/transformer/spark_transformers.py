@@ -7,7 +7,7 @@ from pyspark.sql import SparkSession
 from pyspark_ai import SparkAI
 
 from minimal_ai.app.services.minimal_exception import MinimalETLException
-from minimal_ai.app.utils import DataframeUtils
+from minimal_ai.app.utils.spark_utils import DataframeUtils
 
 logger = logging.getLogger(__name__)
 

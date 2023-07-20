@@ -5,7 +5,7 @@ from pydantic.dataclasses import dataclass
 from pyspark.sql import DataFrame, SparkSession
 
 from minimal_ai.app.services.minimal_exception import MinimalETLException
-from minimal_ai.app.utils import DataframeUtils
+from minimal_ai.app.utils.spark_utils import DataframeUtils
 
 DB_MYSQL_URL: str = 'jdbc:mysql://{host}:{port}/{database}'
 
@@ -23,9 +23,6 @@ class SparkSinkWriter:
 
     async def db_writer(self) -> None:
         """method to write the df to rdbms
-
-        Args:
-            spark (SparkSession): active spark session
         """
         try:
             logger.info("writing dataframe to - %s",
@@ -43,6 +40,23 @@ class SparkSinkWriter:
                            properties=_prop)
             logger.info("Dataframe successfully loaded to - %s ",
                         self.current_task.sink_config["table"])
+        except Exception as excep:
+            logger.error(str(excep))
+            raise MinimalETLException(str(excep))
+
+    async def file_writer(self) -> None:
+        """method to write the df to file system
+        """
+        try:
+            logger.info("writing dataframe to - %s",
+                        self.current_task.sink_config["file_type"])
+            _df: DataFrame = await DataframeUtils.get_df_from_alias(self.spark, self.current_task.upstream_tasks[0])
+
+            _df.write.csv(
+                path=self.current_task.sink_config["file_name"], mode="overwrite", sep=",", header=True)
+            logger.info("Dataframe successfully loaded to - %s ",
+                        self.current_task.sink_config["file_name"])
+
         except Exception as excep:
             logger.error(str(excep))
             raise MinimalETLException(str(excep))

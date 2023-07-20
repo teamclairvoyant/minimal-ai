@@ -258,9 +258,8 @@ class DataLoaderTask(Task):
                                                 self.loader_config, spark)
 
             case "file":
-                file_path = self.pipeline.variable_dir
                 SparkSourceReaders.csv_reader(
-                    self.uuid, self.loader_config, spark, file_path)
+                    self.uuid, self.loader_config, spark)
 
             case _:
                 self.status = TaskStatus.FAILED
@@ -337,6 +336,9 @@ class DataSinkTask(Task):
         match self.sink_type:
             case "db":
                 await SparkSinkWriter(self, spark).db_writer()
+
+            case "file":
+                await SparkSinkWriter(self, spark).file_writer()
 
             case _:
                 self.status = TaskStatus.FAILED

@@ -64,7 +64,7 @@ class PipelineModel(BaseModel):
     """ Model class to define pipeline
     """
     name: str
-    executor_config: Dict[Any, Any]
+    executor_config: Dict[Any, Any] | None = None
 
 
 class VariableType(str, Enum):
