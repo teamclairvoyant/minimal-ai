@@ -60,16 +60,16 @@ class SparkSinkWriter:
             _df: DataFrame = await DataframeUtils.get_df_from_alias(self.spark, self.current_task.upstream_tasks[0])
 
             _df.write.csv(
-                path=self.current_task.sink_config["file_name"], mode="overwrite", sep=",", header=True)
+                path=self.current_task.sink_config["file_path"], mode="overwrite", sep=",", header=True)
             logger.info("Dataframe successfully loaded to - %s ",
-                        self.current_task.sink_config["file_name"])
+                        self.current_task.sink_config["file_path"])
 
         except Exception as excep:
             logger.error(str(excep))
             raise MinimalETLException(str(excep))
 
     async def gs_file_writer(self) -> None:
-        """method to write the df to file system
+        """method to write the df to gs file system
         """
         try:
             logger.info("writing dataframe to - %s in bucket - %s",
@@ -91,8 +91,25 @@ class SparkSinkWriter:
                         f'File type not supported - {self.current_task.sink_config["file_type"]} in sink writer')
 
             logger.info("Dataframe successfully loaded to - %s ",
-                        self.current_task.sink_config["file_name"])
+                        self.current_task.sink_config["file_path"])
 
+        except Exception as excep:
+            logger.error(str(excep))
+            raise MinimalETLException(str(excep))
+    
+    async def bigquery_writer(self) -> None:
+        """ method to write the df to bigquery
+        """
+        try:
+            logger.info("writing dataframe to bigqury")
+            _df: DataFrame = await DataframeUtils.get_df_from_alias(self.spark, self.current_task.upstream_tasks[0])
+            
+            _df.write.format("bigquery").option("writeMethod", "direct")\
+            .mode("overwrite").save(f"{self.current_task.sink_config['dataset']}.{self.current_task.sink_config['table']}")
+            
+            logger.info("Dataframe successfully loaded to bigquery at - %s.%s ",
+                        self.current_task.sink_config["dataset"],self.current_task.sink_config["table"])
+        
         except Exception as excep:
             logger.error(str(excep))
             raise MinimalETLException(str(excep))

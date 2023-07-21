@@ -88,6 +88,7 @@ class SinkType(str, Enum):
     RDBMS = 'rdbms'
     GS_FILE = 'gs_file'
     S3_FILE = 's3_file'
+    BIGQUERY = 'bigquery'
 
 
 class TransformerType(str, Enum):
@@ -157,3 +158,9 @@ class GSFileConfig(BaseModel):
     bucket_name: str
     file_type: str
     file_path: str
+
+class BigQueryConfig(BaseModel):
+    """ properties for bigquery configurations
+    """
+    dataset: str
+    table: str

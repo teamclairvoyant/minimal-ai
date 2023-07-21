@@ -72,6 +72,5 @@ class SparkTransformer:
         join_config.pop('left_table')
         join_config.pop('right_table')
 
-        logger.info(join_config)
         left_df.join(
             right_df, **join_config).createOrReplaceTempView(self.current_task.uuid)

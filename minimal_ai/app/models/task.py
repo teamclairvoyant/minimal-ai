@@ -354,6 +354,9 @@ class DataSinkTask(Task):
 
             case "gs_file":
                 await SparkSinkWriter(self, spark).gs_file_writer()
+            
+            case "bigquery":
+                await SparkSinkWriter(self, spark).bigquery_writer()
 
             case _:
                 self.status = TaskStatus.FAILED
@@ -397,6 +400,13 @@ class DataSinkTask(Task):
                 case "gs_file":
                     _config = GSFileConfig.parse_obj(sink_config)
                     logger.debug(_config)
+                    logger.info('Configuring %s sink for task - %s',
+                                sink_type, self.uuid)
+                    self.sink_type = SinkType(sink_type)
+                    self.sink_config = _config.dict()
+                
+                case "bigquery":
+                    _config = BigQueryConfig.parse_obj(sink_config)
                     logger.info('Configuring %s sink for task - %s',
                                 sink_type, self.uuid)
                     self.sink_type = SinkType(sink_type)
