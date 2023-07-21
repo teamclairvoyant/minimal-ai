@@ -84,8 +84,10 @@ class LoaderType(str, Enum):
 
 class SinkType(str, Enum):
     """ Supported sink type """
-    FILE = 'file'
-    DB = 'db'
+    LOCAL_FILE = 'local_file'
+    RDBMS = 'rdbms'
+    GS_FILE = 'gs_file'
+    S3_FILE = 's3_file'
 
 
 class TransformerType(str, Enum):

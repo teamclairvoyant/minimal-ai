@@ -346,11 +346,14 @@ class DataSinkTask(Task):
                 f"Task type - {self.task_type} must have only 1 upstream task configured")
 
         match self.sink_type:
-            case "db":
+            case "rdbms":
                 await SparkSinkWriter(self, spark).db_writer()
 
-            case "file":
-                await SparkSinkWriter(self, spark).file_writer()
+            case "local_file":
+                await SparkSinkWriter(self, spark).local_file_writer()
+
+            case "gs_file":
+                await SparkSinkWriter(self, spark).gs_file_writer()
 
             case _:
                 self.status = TaskStatus.FAILED
@@ -374,23 +377,29 @@ class DataSinkTask(Task):
         """
 
         try:
-            sink = SinkType(sink_type)
-
-            match sink:
-                case "db":
+            match SinkType(sink_type):
+                case "rdbmd":
                     _config = DBConfig.parse_obj(sink_config)
                     logger.debug(_config)
                     logger.info('Configuring %s sink for task - %s',
                                 sink_type, self.uuid)
-                    self.sink_type = sink
+                    self.sink_type = SinkType(sink_type)
                     self.sink_config = _config.dict()
 
-                case "file":
+                case "local_file":
                     _config = FileConfig.parse_obj(sink_config)
                     logger.debug(_config)
                     logger.info('Configuring %s sink for task - %s',
                                 sink_type, self.uuid)
-                    self.sink_type = sink
+                    self.sink_type = SinkType(sink_type)
+                    self.sink_config = _config.dict()
+
+                case "gs_file":
+                    _config = GSFileConfig.parse_obj(sink_config)
+                    logger.debug(_config)
+                    logger.info('Configuring %s sink for task - %s',
+                                sink_type, self.uuid)
+                    self.sink_type = SinkType(sink_type)
                     self.sink_config = _config.dict()
 
                 case _:

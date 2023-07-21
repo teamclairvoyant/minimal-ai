@@ -7,8 +7,9 @@ from pyspark.sql import SparkSession
 
 from minimal_ai.app.services.minimal_exception import MinimalETLException
 
-DB_MYSQL_URL = 'jdbc:mysql://{host}:{port}/{database}'
+DB_MYSQL_URL = "jdbc:mysql://{host}:{port}/{database}"
 GS_FILE_PATH = "gs://{bucket_name}/{file_path}"
+
 logger = logging.getLogger(__name__)
 
 
