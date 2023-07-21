@@ -210,7 +210,7 @@ class DataLoaderTask(Task):
             loader = LoaderType(loader_type)
 
             match loader:
-                case "db":
+                case "rdbms":
                     _config = DBConfig.parse_obj(loader_config)
                     logger.debug(_config)
                     logger.info('Configuring %s loader for task - %s',
@@ -218,8 +218,16 @@ class DataLoaderTask(Task):
                     self.loader_type = loader
                     self.loader_config = _config.dict()
 
-                case "file":
+                case "local_file":
                     _config = FileConfig.parse_obj(loader_config)
+                    logger.debug(_config)
+                    logger.info('Configuring %s loader for task - %s',
+                                loader_type, self.uuid)
+                    self.loader_type = loader
+                    self.loader_config = _config.dict()
+
+                case "gs_file":
+                    _config = GSFileConfig.parse_obj(loader_config)
                     logger.debug(_config)
                     logger.info('Configuring %s loader for task - %s',
                                 loader_type, self.uuid)
@@ -253,12 +261,16 @@ class DataLoaderTask(Task):
                 'Not all upstream tasks have been executed. Please execute them first')
 
         match self.loader_type:
-            case "db":
+            case "rdbms":
                 SparkSourceReaders.rdbms_reader(self.uuid,
                                                 self.loader_config, spark)
 
-            case "file":
-                SparkSourceReaders.csv_reader(
+            case "local_file":
+                SparkSourceReaders.local_file_reader(
+                    self.uuid, self.loader_config, spark)
+
+            case "gs_file":
+                SparkSourceReaders.gs_file_reader(
                     self.uuid, self.loader_config, spark)
 
             case _:
