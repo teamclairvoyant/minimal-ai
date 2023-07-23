@@ -2,12 +2,13 @@ import asyncio
 import logging
 import os
 import sys
+
 import typer
+
 from minimal_ai.app.api.api_config import settings
 from minimal_ai.app.app_logger.logger import setup_logging
-from minimal_ai.app.utils import excel_to_json
 from minimal_ai.app.services import PipelineService
-from minimal_ai.run_server import start
+from minimal_ai.app.utils import excel_to_json
 
 REPO_PATH_ENV_VAR = 'MINIMAL_REPO_PATH'
 VARIABLE_DIR = '.variable'
@@ -27,6 +28,7 @@ def callback():
     """main script to initiate and execute minimal_ai
     """
 
+
 @app.command()
 def init_app():
     """command to initialize the project
@@ -38,8 +40,6 @@ def init_app():
         os.makedirs(settings.PIPELINES_DIR)
         logger.info("Created directory at - %s", settings.PIPELINES_DIR)
 
-    start()
-
 
 @app.command()
 def generate_json(excel_file_path: str):
@@ -50,6 +50,7 @@ def generate_json(excel_file_path: str):
     """
     asyncio.run(excel_to_json.to_json(excel_file_path))
 
+
 @app.command()
 def exec_pipeline(pipeline_uuid: str):
     """command to execute the pipeline
@@ -58,6 +59,7 @@ def exec_pipeline(pipeline_uuid: str):
         pipeline_uuid (str): uuid of the pipeline
     """
     asyncio.run(PipelineService.execute_pipeline_by_uuid(pipeline_uuid))
+
 
 if __name__ == '__main__':
     app()
