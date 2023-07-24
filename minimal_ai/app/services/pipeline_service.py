@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class PipelineService:
 
     @staticmethod
-    def create_pipeline(name: str, executor_config: Dict[str, str]) -> Dict:
+    def create_pipeline(name: str, executor_config: Dict[str, str] | None) -> Dict:
         """method to create the pipeline
 
         Args:

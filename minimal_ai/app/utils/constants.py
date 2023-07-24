@@ -64,7 +64,7 @@ class PipelineModel(BaseModel):
     """ Model class to define pipeline
     """
     name: str
-    executor_config: Dict[Any, Any] | None = None
+    executor_config: Dict[str, str] | None = None
 
 
 class VariableType(str, Enum):
@@ -158,6 +158,7 @@ class GSFileConfig(BaseModel):
     bucket_name: str
     file_type: str
     file_path: str
+
 
 class BigQueryConfig(BaseModel):
     """ properties for bigquery configurations
