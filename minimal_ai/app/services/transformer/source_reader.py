@@ -87,7 +87,7 @@ class SparkSourceReaders:
                     config['file_path'], config['bucket_name'])
         storage_client = storage.Client()
         bucket = storage_client.bucket(config['bucket_name'])
-        blob_name = config['file_path'].split('/')[-1]
+        blob_name = config['file_path']
 
         if not bucket.blob(blob_name).exists(storage_client):
             logger.error('File path - %s does not exists in bucket - %s',
