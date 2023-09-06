@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 from typing import Dict
@@ -29,7 +28,7 @@ async def to_json(excel_file: str) -> None:
 
     pipeline_model: PipelineModel = PipelineModel.parse_obj(pipeline_dict[0])
 
-    pipeline = PipelineService.create_pipeline(**pipeline_model.dict())
+    pipeline = await PipelineService.create_pipeline(**pipeline_model.dict())
 
     task_update_config = {}
     # init_tasks = []

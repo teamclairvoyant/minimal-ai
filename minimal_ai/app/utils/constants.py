@@ -3,14 +3,12 @@ from typing import Any, Dict, List
 
 from pydantic import BaseModel
 
-PIPELINES_FOLDER = 'pipelines'
 
-
-class ScheduleStatus(str, Enum):
+class PipelineStatus(str, Enum):
     """Schedule status class
     """
     SCHEDULED = 'scheduled'
-    NOT_SCHEDULED = 'not_scheduled'
+    DRAFT = 'draft'
 
 
 class TaskStatus(str, Enum):
@@ -20,13 +18,6 @@ class TaskStatus(str, Enum):
     FAILED = 'failed'
     NOT_EXECUTED = 'not_executed'
     UPDATED = 'updated'
-
-
-class ExecutorType(str, Enum):
-    """ Executor to choose between local python or pyspark
-    """
-    PYTHON = 'python'
-    PYSPARK = 'pyspark'
 
 
 class PipelineType(str, Enum):
@@ -63,16 +54,21 @@ class TaskModel(BaseModel):
     """
     name: str
     task_type: str
-    priority: int
+    priority: int | None = None
     upstream_task_uuids: List[str] | None = None
-    executor_config: dict | None = None
 
 
 class PipelineModel(BaseModel):
     """ Model class to define pipeline
     """
     name: str
-    executor_type: str
+    executor_config: Dict[str, str] | None = None
+
+
+class PipelineUpdateModel(BaseModel):
+    """Model class for pipeline update
+    """
+    reactflow_props: Dict[Any, Any]
 
 
 class VariableType(str, Enum):
@@ -84,14 +80,19 @@ class VariableType(str, Enum):
 
 class LoaderType(str, Enum):
     """ Supported loader type """
-    FILE = 'file'
-    DB = 'db'
+    LOCAL_FILE = 'local_file'
+    GS_FILE = 'gs_file'
+    S3_FILE = 's3_file'
+    RDBMS = 'rdbms'
 
 
 class SinkType(str, Enum):
     """ Supported sink type """
-    FILE = 'file'
-    DB = 'db'
+    LOCAL_FILE = 'local_file'
+    RDBMS = 'rdbms'
+    GS_FILE = 'gs_file'
+    S3_FILE = 's3_file'
+    BIGQUERY = 'bigquery'
 
 
 class TransformerType(str, Enum):
@@ -100,6 +101,7 @@ class TransformerType(str, Enum):
     UNION = 'union'
     PIVOT = 'pivot'
     FILTER = 'filter'
+    SPARKAI = 'sparkAI'
 
 
 class JoinModel(BaseModel):
@@ -108,15 +110,14 @@ class JoinModel(BaseModel):
     """
     left_table: str
     right_table: str
-    left_on: List[str]
-    right_on: List[str]
+    on: List[str]
     how: str
 
 
 class FilterModel(BaseModel):
     """properties for filter transformer
     """
-    where: str
+    prompt: str
 
 
 class PivotModel(BaseModel):
@@ -130,7 +131,6 @@ class PivotModel(BaseModel):
 class TaskUpdateModel(BaseModel):
     """ properties of task to be updated
     """
-    executor_config: Dict[str, Any] | None = None
     upstream_task_uuids: List[str] | None = None
     config_type: str | None = None
     config_properties: Dict[str, Any] | None = None
@@ -153,4 +153,19 @@ class FileConfig(BaseModel):
     """ properties for file type configurations
     """
     file_type: str
-    file_name: str
+    file_path: str
+
+
+class GSFileConfig(BaseModel):
+    """ properties for file type configurations
+    """
+    bucket_name: str
+    file_type: str
+    file_path: str
+
+
+class BigQueryConfig(BaseModel):
+    """ properties for bigquery configurations
+    """
+    dataset: str
+    table: str

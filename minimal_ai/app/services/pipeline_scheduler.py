@@ -8,7 +8,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from minimal_ai.app.api.api_config import settings
 from minimal_ai.app.models.pipeline import Pipeline
-from minimal_ai.app.utils.constants import CronModel, ScheduleStatus
+from minimal_ai.app.utils.constants import CronModel, PipelineStatus
 
 logger = logging.getLogger(__name__)
 
@@ -82,5 +82,5 @@ def schedule_pipeline(pipeline_uuid: str, cron_time: CronModel, func):
     logger.debug(cron)
     scheduler.add_job(func, args=[pipeline_uuid],
                       trigger=cron, id=pipeline_uuid)
-    pipeline.schedule_status = ScheduleStatus.SCHEDULED
+    pipeline.status = PipelineStatus.SCHEDULED
     pipeline.save()

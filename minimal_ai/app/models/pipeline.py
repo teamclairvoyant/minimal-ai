@@ -3,7 +3,6 @@ import json
 import logging
 import os
 import shutil
-from enum import Enum
 from queue import Queue
 from typing import Any, Dict, List
 
@@ -15,8 +14,8 @@ from minimal_ai.app.api.api_config import settings
 from minimal_ai.app.models.task import Task
 from minimal_ai.app.models.variable import VariableManager
 from minimal_ai.app.services.minimal_exception import MinimalETLException
-from minimal_ai.app.utils.constants import (PIPELINES_FOLDER, ExecutorType,
-                                            ScheduleStatus)
+from minimal_ai.app.services.spark_main import SparkMain
+from minimal_ai.app.utils.constants import PipelineStatus
 from minimal_ai.app.utils.string_utils import clean_name, format_enum
 
 METADATA_FILE = 'metadata.json'
@@ -28,10 +27,11 @@ logger = logging.getLogger(__name__)
 class Pipeline:
     uuid: str
     name: str | None = None
-    tasks: Dict[Any, Any] = Field(default_factory=Dict)
-    executor_type: Enum = ExecutorType.PYTHON
+    tasks: Dict[Any, Any] = Field(default={})
+    executor_config: Dict[Any, Any] = Field(default={})
     config: Dict | None = None
-    schedule_status: ScheduleStatus = ScheduleStatus.NOT_SCHEDULED
+    status: PipelineStatus = PipelineStatus.DRAFT
+    reactflow_props: Dict[Any, Any] = Field(default={})
 
     def __post_init__(self):
         """
@@ -47,7 +47,7 @@ class Pipeline:
         """
         path to config file for the pipeline
         """
-        return os.path.join(settings.REPO_PATH, PIPELINES_FOLDER, self.uuid)
+        return os.path.join(settings.REPO_PATH, settings.PIPELINES_DIR, self.uuid)
 
     @property
     def variable_dir(self):
@@ -88,9 +88,10 @@ class Pipeline:
         """
         self.name = _config.get('name')
         self.uuid = _config.get('uuid')  # type: ignore
-        self.executor_type = ExecutorType(_config.get('executor_type'))
+        self.executor_config = _config.get('executor_config', {})
         self.tasks = _config.get('tasks', {})
-        self.schedule_status = ScheduleStatus(_config.get('schedule_status'))
+        self.status = PipelineStatus(_config.get('status'))
+        self.reactflow_props = _config.get('reactflow_props', {})
 
     def base_obj(self) -> Dict:
         """
@@ -101,18 +102,19 @@ class Pipeline:
         return {
             "name": self.name,
             "uuid": self.uuid,
-            "executor_type": self.executor_type,
+            "executor_config": self.executor_config,
             "tasks": self.tasks,
-            "schedule_status": self.schedule_status
+            "status": self.status,
+            "reactflow_props": self.reactflow_props
         }
 
     @classmethod
-    def create(cls, name: str, executor_type: ExecutorType) -> 'Pipeline':
+    def create(cls, name: str, executor_config: Dict[str, str] | None) -> 'Pipeline':
         """
         method to create object pipeline class
         Args:
             name (str): name of the pipeline
-            executor_type (ExecutorType): executor type of the pipeline
+            executor_config (Dict): spark config of the pipeline
 
         Returns:
 
@@ -120,7 +122,7 @@ class Pipeline:
         logger.info("creating pipeline %s", name)
         uuid = clean_name(name)
         pipeline_path = os.path.join(
-            settings.REPO_PATH, PIPELINES_FOLDER, uuid)
+            settings.REPO_PATH, settings.PIPELINES_DIR, uuid)
         variable_path = os.path.join(pipeline_path, VARIABLE_DIR)
 
         if os.path.exists(pipeline_path):
@@ -136,8 +138,8 @@ class Pipeline:
             json.dump({
                 "name": name,
                 "uuid": uuid,
-                "executor_type": format_enum(executor_type or ExecutorType.PYTHON),
-                "schedule_status": format_enum(ScheduleStatus.NOT_SCHEDULED)
+                "executor_config": executor_config if executor_config else {},
+                "status": format_enum(PipelineStatus.DRAFT)
             }, config_file, indent=4)
 
         pipeline = Pipeline(uuid=uuid)
@@ -157,7 +159,7 @@ class Pipeline:
 
         config_path = os.path.join(
             settings.REPO_PATH,
-            PIPELINES_FOLDER,
+            settings.PIPELINES_DIR,
             uuid,
             METADATA_FILE,
         )
@@ -172,7 +174,6 @@ class Pipeline:
             except Exception as err:
                 config = {}
                 logger.info(err)
-
         pipeline = cls(uuid=uuid, config=config)
 
         return pipeline
@@ -190,7 +191,7 @@ class Pipeline:
 
         config_path = os.path.join(
             settings.REPO_PATH,
-            PIPELINES_FOLDER,
+            settings.PIPELINES_DIR,
             uuid,
             METADATA_FILE,
         )
@@ -255,7 +256,20 @@ class Pipeline:
 
         return task_uuid in self.tasks
 
-    def add_task(self, task, priority=None) -> Any:
+    def add_reactflow_props(self, reactflow_props: Dict[Any, Any]) -> None:
+        """method to reactflow props to pipeline object
+
+        Args:
+            reactflow_props (Dict[Any,Any]): reactflow props object
+        """
+        logger.info("Adding reactflow props to pipeline - %s object", self.uuid)
+        if self.reactflow_props:
+            self.reactflow_props.clear()
+
+        self.reactflow_props.update(reactflow_props)  # type:ignore
+        self.save()
+
+    def add_task(self, task, priority=None) -> None:
         """ method to attach task to pipeline
 
         Args:
@@ -274,7 +288,6 @@ class Pipeline:
         # self.validate('A cycle was formed while adding a task')
 
         self.save()
-        return task
 
     def save(self) -> None:
         """ method to save current pipeline
@@ -296,11 +309,11 @@ class Pipeline:
         def create_task(task_conf: Dict):
             async def build_and_execute():
                 task = Task.get_task_from_config(task_conf, self)
-                exec_data = await task.execute()
+                exec_data = await task.execute(spark)
                 self.tasks[task_conf['uuid']] = exec_data['task']
 
             return asyncio.create_task(build_and_execute())
-
+        spark, spark_config = SparkMain(self.uuid).start_spark()
         task_queue = Queue()
         executed_tasks = {}
         for _task in root_tasks:
@@ -333,4 +346,5 @@ class Pipeline:
         remaining_tasks = filter(
             lambda task: task is not None, executed_tasks.values())
         await asyncio.gather(*remaining_tasks)
+        spark.stop()
         self.save()

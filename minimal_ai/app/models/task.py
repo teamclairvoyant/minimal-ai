@@ -1,15 +1,14 @@
-import json
 import logging
 from dataclasses import field
 from typing import Any, Dict, List
 
-import polars as pl
 from pydantic.dataclasses import dataclass
+from pyspark.sql import SparkSession
 
-from minimal_ai.app.services.db_service import DBService
-from minimal_ai.app.services.file_service import FileService
 from minimal_ai.app.services.minimal_exception import MinimalETLException
-from minimal_ai.app.services.transformer import PythonTransformer
+from minimal_ai.app.services.transformer import (SparkSinkWriter,
+                                                 SparkSourceReaders,
+                                                 SparkTransformer)
 from minimal_ai.app.utils import *
 
 logger = logging.getLogger(__name__)
@@ -18,10 +17,10 @@ logger = logging.getLogger(__name__)
 @dataclass(kw_only=True)
 class Task:
     uuid: str
+    name: str
     task_type: TaskType
     status: TaskStatus = TaskStatus.NOT_EXECUTED
     pipeline: Any = None
-    executor_config: Dict[Any, Any] = field(default_factory=dict)
     upstream_tasks: List[str] = field(default_factory=list)
     downstream_tasks: List[str] = field(default_factory=list)
 
@@ -42,7 +41,6 @@ class Task:
     def create(cls,
                name: str,
                task_type: str,
-               executor_config=None,
                pipeline=None,
                priority: int | None = None,
                upstream_task_uuids=None) -> 'Task':
@@ -51,16 +49,12 @@ class Task:
         Args:
             name (str): task name
             task_type (TaskType): type of the task
-            executor_config (Dict, optional): configurations related to the task. Defaults to None.
             pipeline (Pipeline, optional): pipeline. Defaults to None.
             priority (int | None, optional): priority of the task in the pipeline. Defaults to None.
             upstream_task_uuids (_type_, optional): _description_. Defaults to None.
         """
         if upstream_task_uuids is None:
             upstream_task_uuids = []
-
-        # if executor_config is None:
-        #     executor_config = {}
 
         uuid = clean_name(name)
         logger.info('Creating task - %s', uuid)
@@ -74,9 +68,9 @@ class Task:
 
         task = cls.task_class_from_type(task_type)(
             uuid=uuid,
+            name=name,
             task_type=TaskType(task_type),
-            pipeline=pipeline,
-            executor_config=executor_config)
+            pipeline=pipeline)
 
         task.after_create(
             pipeline=pipeline,
@@ -188,18 +182,31 @@ class DataLoaderTask(Task):
 
     def __post_init__(self):
         self.loader_config = {} if self.loader_config is None else self.loader_config
-        self.executor_config = {} if self.executor_config is None else self.executor_config
+
         self.upstream_tasks = [] if self.upstream_tasks is None else self.upstream_tasks
         self.downstream_tasks = [] if self.downstream_tasks is None else self.downstream_tasks
+
+    @property
+    def is_configured(self) -> bool:
+        """method to check if task is configured
+
+        Returns:
+            bool: True/False
+        """
+        if (self.loader_type and self.loader_type is not None) and \
+                (self.loader_config and self.loader_config is not None):
+            return True
+        return False
 
     def base_dict_obj(self) -> Dict:
         """ method to get task dict object
         """
         return {
             'uuid': self.uuid,
+            'name': self.name,
             'status': self.status,
             'task_type': self.task_type,
-            'executor_config': self.executor_config,
+            'configured': self.is_configured,
             'upstream_tasks': self.upstream_tasks,
             'downstream_tasks': self.downstream_tasks,
             'loader_type': self.loader_type,
@@ -218,7 +225,7 @@ class DataLoaderTask(Task):
             loader = LoaderType(loader_type)
 
             match loader:
-                case "db":
+                case "rdbms":
                     _config = DBConfig.parse_obj(loader_config)
                     logger.debug(_config)
                     logger.info('Configuring %s loader for task - %s',
@@ -226,8 +233,16 @@ class DataLoaderTask(Task):
                     self.loader_type = loader
                     self.loader_config = _config.dict()
 
-                case "file":
+                case "local_file":
                     _config = FileConfig.parse_obj(loader_config)
+                    logger.debug(_config)
+                    logger.info('Configuring %s loader for task - %s',
+                                loader_type, self.uuid)
+                    self.loader_type = loader
+                    self.loader_config = _config.dict()
+
+                case "gs_file":
+                    _config = GSFileConfig.parse_obj(loader_config)
                     logger.debug(_config)
                     logger.info('Configuring %s loader for task - %s',
                                 loader_type, self.uuid)
@@ -244,12 +259,11 @@ class DataLoaderTask(Task):
             raise MinimalETLException(
                 f'Loader type - {loader_type} not supported | {excep.args}')
 
-    async def execute(self, show_sample: bool = False, sample_count: int = 0) -> Dict:
+    async def execute(self, spark: SparkSession) -> Dict:
         """
         async method to execute the task
         Args:
-            show_sample (bool): whether to return the output dataframe
-            sample_count (): number of rows of the dataframe
+            spark (SparkSession): current spark session object
 
         """
         logger.info("Executing task - %s", self.uuid)
@@ -262,15 +276,17 @@ class DataLoaderTask(Task):
                 'Not all upstream tasks have been executed. Please execute them first')
 
         match self.loader_type:
-            case "db":
-                _config: Dict = self.loader_config
-                db_conn = DBService.get_db_conn(_config)
-                loaded_data = DBService.load_source(db_conn, _config['table'])
+            case "rdbms":
+                SparkSourceReaders.rdbms_reader(self.uuid,
+                                                self.loader_config, spark)
 
-            case "file":
-                _config: Dict = self.loader_config
-                file_path = self.pipeline.variable_dir
-                loaded_data = FileService.load_source(_config, file_path)
+            case "local_file":
+                SparkSourceReaders.local_file_reader(
+                    self.uuid, self.loader_config, spark)
+
+            case "gs_file":
+                SparkSourceReaders.gs_file_reader(
+                    self.uuid, self.loader_config, spark)
 
             case _:
                 self.status = TaskStatus.FAILED
@@ -281,20 +297,13 @@ class DataLoaderTask(Task):
 
         self.status = TaskStatus.EXECUTED
 
-        self.pipeline.variable_manager.add_variable(
-            self.pipeline.uuid,
-            self.uuid,
-            self.uuid,
-            loaded_data,
-            VariableType.PYTHON_DATAFRAME
-        )
-
-        if show_sample:
-            logger.debug(loaded_data)
-            return {
-                'task': self.base_dict_obj(),
-                'output': json.loads(loaded_data.head(sample_count).write_json(row_oriented=True))
-            }
+        # self.pipeline.variable_manager.add_variable(
+        #     self.pipeline.uuid,
+        #     self.uuid,
+        #     self.uuid,
+        #     loaded_data.collect(),
+        #     loaded_data.schema
+        # )
         return {
             'task': self.base_dict_obj(),
             'executed': self.status
@@ -308,36 +317,45 @@ class DataSinkTask(Task):
 
     def __post_init__(self):
         self.sink_config = {} if self.sink_config is None else self.sink_config
-        self.executor_config = {} if self.executor_config is None else self.executor_config
+
         self.upstream_tasks = [] if self.upstream_tasks is None else self.upstream_tasks
         self.downstream_tasks = [] if self.downstream_tasks is None else self.downstream_tasks
+
+    @property
+    def is_configured(self) -> bool:
+        """method to check if task is configured
+
+        Returns:
+            bool: True/False
+        """
+        if (self.sink_type and self.sink_type is not None) and (self.sink_config and self.sink_config is not None):
+            return True
+        return False
 
     def base_dict_obj(self) -> Dict:
         """ method to get task dict object
         """
         return {
             'uuid': self.uuid,
+            'name': self.name,
             'status': self.status,
             'task_type': self.task_type,
-            'executor_config': self.executor_config,
+            'configure': self.is_configured,
             'upstream_tasks': self.upstream_tasks,
             'downstream_tasks': self.downstream_tasks,
             'sink_type': self.sink_type,
             'sink_config': self.sink_config
         }
 
-    async def execute(self, show_sample: bool = False, sample_count: int = 0) -> Dict:
+    async def execute(self, spark: SparkSession) -> Dict:
         """method to execute task
 
         Args:
-            show_sample (bool): wether to show output, default is False
-            sample_count (int): count of records to be shown, default is 0
+            spark (SparkSession): current spark session object
 
         Raises:
             MinimalETLException
 
-        Returns:
-            Dict: task information along with sample data
         """
         logger.info("Executing task - %s", self.uuid)
         if not self.all_upstream_task_executed:
@@ -354,14 +372,18 @@ class DataSinkTask(Task):
             raise MinimalETLException(
                 f"Task type - {self.task_type} must have only 1 upstream task configured")
 
-        target_data: pl.DataFrame = await self.pipeline.variable_manager.get_variable_data(self.upstream_tasks[0])
-        # loaded_data = pl.DataFrame
         match self.sink_type:
-            case "db":
-                _config: Dict = self.sink_config
-                db_conn = DBService.get_db_conn(_config)
-                DBService.ingest_data(
-                    db_conn, _config['table'], target_data.to_pandas(), self.sink_config['ingestion_type'])
+            case "rdbms":
+                await SparkSinkWriter(self, spark).db_writer()
+
+            case "local_file":
+                await SparkSinkWriter(self, spark).local_file_writer()
+
+            case "gs_file":
+                await SparkSinkWriter(self, spark).gs_file_writer()
+
+            case "bigquery":
+                await SparkSinkWriter(self, spark).bigquery_writer()
 
             case _:
                 self.status = TaskStatus.FAILED
@@ -371,11 +393,6 @@ class DataSinkTask(Task):
 
         self.status = TaskStatus.EXECUTED
 
-        if show_sample:
-            return {
-                'task': self.base_dict_obj(),
-                'sample': json.loads(target_data.head(sample_count).write_json(row_oriented=True))
-            }
         return {
             'task': self.base_dict_obj()
         }
@@ -390,23 +407,36 @@ class DataSinkTask(Task):
         """
 
         try:
-            sink = SinkType(sink_type)
-
-            match sink:
-                case "db":
+            match SinkType(sink_type):
+                case "rdbmd":
                     _config = DBConfig.parse_obj(sink_config)
                     logger.debug(_config)
                     logger.info('Configuring %s sink for task - %s',
                                 sink_type, self.uuid)
-                    self.sink_type = sink
+                    self.sink_type = SinkType(sink_type)
                     self.sink_config = _config.dict()
 
-                case "file":
+                case "local_file":
                     _config = FileConfig.parse_obj(sink_config)
                     logger.debug(_config)
                     logger.info('Configuring %s sink for task - %s',
                                 sink_type, self.uuid)
-                    self.sink_type = sink
+                    self.sink_type = SinkType(sink_type)
+                    self.sink_config = _config.dict()
+
+                case "gs_file":
+                    _config = GSFileConfig.parse_obj(sink_config)
+                    logger.debug(_config)
+                    logger.info('Configuring %s sink for task - %s',
+                                sink_type, self.uuid)
+                    self.sink_type = SinkType(sink_type)
+                    self.sink_config = _config.dict()
+
+                case "bigquery":
+                    _config = BigQueryConfig.parse_obj(sink_config)
+                    logger.info('Configuring %s sink for task - %s',
+                                sink_type, self.uuid)
+                    self.sink_type = SinkType(sink_type)
                     self.sink_config = _config.dict()
 
                 case _:
@@ -427,18 +457,30 @@ class DataTransformerTask(Task):
 
     def __post_init__(self):
         self.transformer_config = {} if self.transformer_config is None else self.transformer_config
-        self.executor_config = {} if self.executor_config is None else self.executor_config
         self.upstream_tasks = [] if self.upstream_tasks is None else self.upstream_tasks
         self.downstream_tasks = [] if self.downstream_tasks is None else self.downstream_tasks
+
+    @property
+    def is_configured(self) -> bool:
+        """method to check if task is configured
+
+        Returns:
+            bool: True/False
+        """
+        if (self.transformer_type and self.transformer_type is not None) and \
+                (self.transformer_config and self.transformer_config is not None):
+            return True
+        return False
 
     def base_dict_obj(self) -> Dict:
         """ method to get task dict object
         """
         return {
             'uuid': self.uuid,
+            'name': self.name,
             'status': self.status,
             'task_type': self.task_type,
-            'executor_config': self.executor_config,
+            'configured': self.is_configured,
             'upstream_tasks': self.upstream_tasks,
             'downstream_tasks': self.downstream_tasks,
             'transformer_type': self.transformer_type,
@@ -453,12 +495,11 @@ class DataTransformerTask(Task):
             transformer_config (Dict): properties of the sink
 
         """
-
         try:
             transformer = TransformerType(transformer_type)
             logger.debug(transformer)
             match transformer:
-                case "filter":
+                case "sparkAI":
                     _config = FilterModel.parse_obj(transformer_config)
                     logger.debug(_config)
                     logger.info('Configuring %s transformer for task - %s',
@@ -497,18 +538,15 @@ class DataTransformerTask(Task):
             raise MinimalETLException(
                 f'Transformer type - {transformer_type} not supported | {excep.args}')
 
-    async def execute(self, show_sample: bool = False, sample_count: int = 0) -> Dict:
+    async def execute(self, spark: SparkSession) -> Dict:
         """method to execute task
 
         Args:
-            show_sample (bool): wether to show output, default is Fasle
-            sample_count (int): count of records to be shown, default is 0
+            spark (SparkSession): current spark session object
 
         Raises:
             MinimalETLException
 
-        Returns:
-            Dict: task information along with sample data
         """
         logger.info("Executing task - %s", self.uuid)
         if not self.all_upstream_task_executed:
@@ -518,33 +556,10 @@ class DataTransformerTask(Task):
             raise MinimalETLException(
                 'Not all upstream tasks have been executed. Please execute them first')
 
-        match self.pipeline.executor_type:
-            case "python":
-                target_data = await PythonTransformer(current_task=self).transform()
-            # case "pyspark":
-            #     pass
-            case _:
-                self.status = TaskStatus.FAILED
-                logger.error('Executor type - %s not supported',
-                             self.pipeline.executor_type)
-                raise MinimalETLException(
-                    f'Executor type - {self.pipeline.executor_type} not supported')
+        await SparkTransformer(current_task=self, spark=spark).transform()
 
         self.status = TaskStatus.EXECUTED
 
-        self.pipeline.variable_manager.add_variable(
-            self.pipeline.uuid,
-            self.uuid,
-            self.uuid,
-            target_data,
-            VariableType.PYTHON_DATAFRAME
-        )
-
-        if show_sample:
-            return {
-                'task': self.base_dict_obj(),
-                'sample': json.loads(target_data.head(sample_count).write_json(row_oriented=True))
-            }
         return {
             'task': self.base_dict_obj()
         }

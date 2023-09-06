@@ -75,3 +75,15 @@ def format_enum(var: Enum | str):
         str: value of enum or str
     """
     return var.value if isinstance(var, Enum) else var
+
+
+def clean_query(query_string: str) -> str:
+    """method to clean sql query
+
+    Args:
+        query_string (str): query string
+
+    Returns:
+        str: clean query string
+    """
+    return query_string.strip(' \n\t')
