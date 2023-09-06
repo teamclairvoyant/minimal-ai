@@ -3,14 +3,12 @@ from typing import Any, Dict, List
 
 from pydantic import BaseModel
 
-PIPELINES_FOLDER = 'pipelines'
 
-
-class ScheduleStatus(str, Enum):
+class PipelineStatus(str, Enum):
     """Schedule status class
     """
     SCHEDULED = 'scheduled'
-    NOT_SCHEDULED = 'not_scheduled'
+    DRAFT = 'draft'
 
 
 class TaskStatus(str, Enum):
@@ -56,7 +54,7 @@ class TaskModel(BaseModel):
     """
     name: str
     task_type: str
-    priority: int
+    priority: int | None = None
     upstream_task_uuids: List[str] | None = None
 
 
@@ -65,6 +63,12 @@ class PipelineModel(BaseModel):
     """
     name: str
     executor_config: Dict[str, str] | None = None
+
+
+class PipelineUpdateModel(BaseModel):
+    """Model class for pipeline update
+    """
+    reactflow_props: Dict[Any, Any]
 
 
 class VariableType(str, Enum):

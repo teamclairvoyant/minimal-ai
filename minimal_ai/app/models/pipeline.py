@@ -15,7 +15,7 @@ from minimal_ai.app.models.task import Task
 from minimal_ai.app.models.variable import VariableManager
 from minimal_ai.app.services.minimal_exception import MinimalETLException
 from minimal_ai.app.services.spark_main import SparkMain
-from minimal_ai.app.utils.constants import PIPELINES_FOLDER, ScheduleStatus
+from minimal_ai.app.utils.constants import PipelineStatus
 from minimal_ai.app.utils.string_utils import clean_name, format_enum
 
 METADATA_FILE = 'metadata.json'
@@ -27,10 +27,11 @@ logger = logging.getLogger(__name__)
 class Pipeline:
     uuid: str
     name: str | None = None
-    tasks: Dict[Any, Any] = Field(default_factory=Dict)
-    executor_config: Dict[Any, Any] = Field(default_factory=Dict)
+    tasks: Dict[Any, Any] = Field(default={})
+    executor_config: Dict[Any, Any] = Field(default={})
     config: Dict | None = None
-    schedule_status: ScheduleStatus = ScheduleStatus.NOT_SCHEDULED
+    status: PipelineStatus = PipelineStatus.DRAFT
+    reactflow_props: Dict[Any, Any] = Field(default={})
 
     def __post_init__(self):
         """
@@ -46,7 +47,7 @@ class Pipeline:
         """
         path to config file for the pipeline
         """
-        return os.path.join(settings.REPO_PATH, PIPELINES_FOLDER, self.uuid)
+        return os.path.join(settings.REPO_PATH, settings.PIPELINES_DIR, self.uuid)
 
     @property
     def variable_dir(self):
@@ -89,7 +90,8 @@ class Pipeline:
         self.uuid = _config.get('uuid')  # type: ignore
         self.executor_config = _config.get('executor_config', {})
         self.tasks = _config.get('tasks', {})
-        self.schedule_status = ScheduleStatus(_config.get('schedule_status'))
+        self.status = PipelineStatus(_config.get('status'))
+        self.reactflow_props = _config.get('reactflow_props', {})
 
     def base_obj(self) -> Dict:
         """
@@ -102,7 +104,8 @@ class Pipeline:
             "uuid": self.uuid,
             "executor_config": self.executor_config,
             "tasks": self.tasks,
-            "schedule_status": self.schedule_status
+            "status": self.status,
+            "reactflow_props": self.reactflow_props
         }
 
     @classmethod
@@ -119,7 +122,7 @@ class Pipeline:
         logger.info("creating pipeline %s", name)
         uuid = clean_name(name)
         pipeline_path = os.path.join(
-            settings.REPO_PATH, PIPELINES_FOLDER, uuid)
+            settings.REPO_PATH, settings.PIPELINES_DIR, uuid)
         variable_path = os.path.join(pipeline_path, VARIABLE_DIR)
 
         if os.path.exists(pipeline_path):
@@ -136,7 +139,7 @@ class Pipeline:
                 "name": name,
                 "uuid": uuid,
                 "executor_config": executor_config if executor_config else {},
-                "schedule_status": format_enum(ScheduleStatus.NOT_SCHEDULED)
+                "status": format_enum(PipelineStatus.DRAFT)
             }, config_file, indent=4)
 
         pipeline = Pipeline(uuid=uuid)
@@ -156,7 +159,7 @@ class Pipeline:
 
         config_path = os.path.join(
             settings.REPO_PATH,
-            PIPELINES_FOLDER,
+            settings.PIPELINES_DIR,
             uuid,
             METADATA_FILE,
         )
@@ -171,7 +174,6 @@ class Pipeline:
             except Exception as err:
                 config = {}
                 logger.info(err)
-
         pipeline = cls(uuid=uuid, config=config)
 
         return pipeline
@@ -189,7 +191,7 @@ class Pipeline:
 
         config_path = os.path.join(
             settings.REPO_PATH,
-            PIPELINES_FOLDER,
+            settings.PIPELINES_DIR,
             uuid,
             METADATA_FILE,
         )
@@ -254,7 +256,20 @@ class Pipeline:
 
         return task_uuid in self.tasks
 
-    def add_task(self, task, priority=None) -> Any:
+    def add_reactflow_props(self, reactflow_props: Dict[Any, Any]) -> None:
+        """method to reactflow props to pipeline object
+
+        Args:
+            reactflow_props (Dict[Any,Any]): reactflow props object
+        """
+        logger.info("Adding reactflow props to pipeline - %s object", self.uuid)
+        if self.reactflow_props:
+            self.reactflow_props.clear()
+
+        self.reactflow_props.update(reactflow_props)  # type:ignore
+        self.save()
+
+    def add_task(self, task, priority=None) -> None:
         """ method to attach task to pipeline
 
         Args:
@@ -273,7 +288,6 @@ class Pipeline:
         # self.validate('A cycle was formed while adding a task')
 
         self.save()
-        return task
 
     def save(self) -> None:
         """ method to save current pipeline

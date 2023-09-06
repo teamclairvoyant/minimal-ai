@@ -26,14 +26,13 @@ class TaskService:
         """
         pipeline = await Pipeline.get_pipeline_async(pipeline_uuid)
         logger.info('Pipeline - %s', pipeline.uuid)
+        Task.create(task_config.name,
+                    task_config.task_type,
+                    pipeline=pipeline,
+                    priority=task_config.priority,
+                    upstream_task_uuids=task_config.upstream_task_uuids)
 
-        task = Task.create(task_config.name,
-                           task_config.task_type,
-                           pipeline=pipeline,
-                           priority=task_config.priority,
-                           upstream_task_uuids=task_config.upstream_task_uuids)
-
-        return task.base_dict_obj()  # type: ignore
+        return pipeline.base_obj()
 
     @staticmethod
     async def get_task(pipeline_uuid: str, task_uuid: str) -> Dict:
@@ -139,7 +138,6 @@ class TaskService:
 
         if not await request.form():
             task_config = TaskUpdateModel(**json.loads(await request.body()))
-
             if task_config.upstream_task_uuids is not None and task.upstream_tasks is not None:
                 logger.info(
                     'Updating upstream tasks for the task - %s', task_uuid)
@@ -169,7 +167,7 @@ class TaskService:
         pipeline.tasks[task_uuid] = task.base_dict_obj()
         logger.info('Updating pipeline - %s', pipeline_uuid)
         pipeline.save()
-        return task.base_dict_obj()
+        return pipeline.base_obj()
 
     @staticmethod
     async def update_task_by_excel(pipeline_uuid: str, task_uuid: str, excel_config: Dict) -> Dict:

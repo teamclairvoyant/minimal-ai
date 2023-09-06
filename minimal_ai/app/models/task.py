@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 @dataclass(kw_only=True)
 class Task:
     uuid: str
+    name: str
     task_type: TaskType
     status: TaskStatus = TaskStatus.NOT_EXECUTED
     pipeline: Any = None
@@ -67,6 +68,7 @@ class Task:
 
         task = cls.task_class_from_type(task_type)(
             uuid=uuid,
+            name=name,
             task_type=TaskType(task_type),
             pipeline=pipeline)
 
@@ -184,14 +186,27 @@ class DataLoaderTask(Task):
         self.upstream_tasks = [] if self.upstream_tasks is None else self.upstream_tasks
         self.downstream_tasks = [] if self.downstream_tasks is None else self.downstream_tasks
 
+    @property
+    def is_configured(self) -> bool:
+        """method to check if task is configured
+
+        Returns:
+            bool: True/False
+        """
+        if (self.loader_type and self.loader_type is not None) and \
+                (self.loader_config and self.loader_config is not None):
+            return True
+        return False
+
     def base_dict_obj(self) -> Dict:
         """ method to get task dict object
         """
         return {
             'uuid': self.uuid,
+            'name': self.name,
             'status': self.status,
             'task_type': self.task_type,
-
+            'configured': self.is_configured,
             'upstream_tasks': self.upstream_tasks,
             'downstream_tasks': self.downstream_tasks,
             'loader_type': self.loader_type,
@@ -306,14 +321,26 @@ class DataSinkTask(Task):
         self.upstream_tasks = [] if self.upstream_tasks is None else self.upstream_tasks
         self.downstream_tasks = [] if self.downstream_tasks is None else self.downstream_tasks
 
+    @property
+    def is_configured(self) -> bool:
+        """method to check if task is configured
+
+        Returns:
+            bool: True/False
+        """
+        if (self.sink_type and self.sink_type is not None) and (self.sink_config and self.sink_config is not None):
+            return True
+        return False
+
     def base_dict_obj(self) -> Dict:
         """ method to get task dict object
         """
         return {
             'uuid': self.uuid,
+            'name': self.name,
             'status': self.status,
             'task_type': self.task_type,
-
+            'configure': self.is_configured,
             'upstream_tasks': self.upstream_tasks,
             'downstream_tasks': self.downstream_tasks,
             'sink_type': self.sink_type,
@@ -354,7 +381,7 @@ class DataSinkTask(Task):
 
             case "gs_file":
                 await SparkSinkWriter(self, spark).gs_file_writer()
-            
+
             case "bigquery":
                 await SparkSinkWriter(self, spark).bigquery_writer()
 
@@ -404,7 +431,7 @@ class DataSinkTask(Task):
                                 sink_type, self.uuid)
                     self.sink_type = SinkType(sink_type)
                     self.sink_config = _config.dict()
-                
+
                 case "bigquery":
                     _config = BigQueryConfig.parse_obj(sink_config)
                     logger.info('Configuring %s sink for task - %s',
@@ -433,13 +460,27 @@ class DataTransformerTask(Task):
         self.upstream_tasks = [] if self.upstream_tasks is None else self.upstream_tasks
         self.downstream_tasks = [] if self.downstream_tasks is None else self.downstream_tasks
 
+    @property
+    def is_configured(self) -> bool:
+        """method to check if task is configured
+
+        Returns:
+            bool: True/False
+        """
+        if (self.transformer_type and self.transformer_type is not None) and \
+                (self.transformer_config and self.transformer_config is not None):
+            return True
+        return False
+
     def base_dict_obj(self) -> Dict:
         """ method to get task dict object
         """
         return {
             'uuid': self.uuid,
+            'name': self.name,
             'status': self.status,
             'task_type': self.task_type,
+            'configured': self.is_configured,
             'upstream_tasks': self.upstream_tasks,
             'downstream_tasks': self.downstream_tasks,
             'transformer_type': self.transformer_type,

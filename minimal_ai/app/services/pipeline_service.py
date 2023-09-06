@@ -1,7 +1,11 @@
 import asyncio
+import datetime
 import logging
-from typing import Dict, List
+from typing import Any, Dict, List
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from minimal_ai.app.models.db_models import PipelineMeta
 from minimal_ai.app.models.pipeline import Pipeline
 from minimal_ai.app.utils import TaskType
 
@@ -11,18 +15,38 @@ logger = logging.getLogger(__name__)
 class PipelineService:
 
     @staticmethod
-    def create_pipeline(name: str, executor_config: Dict[str, str] | None) -> Dict:
+    async def create_pipeline(name: str, executor_config: Dict[str, str] | None, db: AsyncSession) -> Dict:
         """method to create the pipeline
 
         Args:
             name (str): name of the pipeline
             executor_config (Dict[str,str]): spark configurations
-
+            db (Session): Database Session object
         Returns:
             Dict: created pipeline object
         """
         pipeline = Pipeline.create(name, executor_config)
+        db.add(PipelineMeta(pipeline_uuid=pipeline.uuid,
+               created_by="test_user", created_at=datetime.datetime.now()))
+        await db.commit()
         logger.info("Pipeline - %s created", name)
+        return pipeline.base_obj()
+
+    @staticmethod
+    async def update_pipeline(pipeline_uuid: str, reactflow_props: Dict[Any, Any]) -> Dict:
+        """method to update existing pipeline
+
+        Args:
+            pipeline_uuid (str): uuid of the pipeline
+            reactflow_props (Dict[Any,Any]): reactflow object
+
+        Returns:
+            Dict: updated pipeline object
+        """
+        pipeline = await Pipeline.get_pipeline_async(pipeline_uuid)
+        logger.info("Pipeline - %s fetched", pipeline_uuid)
+        pipeline.add_reactflow_props(reactflow_props)
+
         return pipeline.base_obj()
 
     @staticmethod

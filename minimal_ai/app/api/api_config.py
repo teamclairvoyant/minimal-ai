@@ -2,22 +2,33 @@ import os
 import secrets
 from typing import Union
 
-from pydantic import BaseSettings, validator
+from pydantic import Field, computed_field, validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+ENV_FILE_PATH = os.getenv("MINIMAL_AI_ENV_DIR")
 
 
 class Settings(BaseSettings):
     """Settings class which extends BaseSettings
     """
-    API_STR: str = "/api/v1"
-    SECRET_KEY: str = secrets.token_urlsafe(32)
-    REPO_PATH: str = os.path.join(os.getcwd())
-    PIPELINES_DIR: str = os.path.join(os.getcwd(), 'pipelines')
-    LOG_DIR: str = os.path.join(os.getcwd(), 'logs')
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
+    API_STR: str = Field(default="/api/v1")
+    SECRET_KEY: str = Field(default=secrets.token_urlsafe(32))
+    REPO_PATH: str = Field(default=os.path.join(os.getcwd()))
+
+    @computed_field
+    @property
+    def PIPELINES_DIR(self) -> str:
+        return os.path.join(self.REPO_PATH, "pipelines")
+
+    @computed_field
+    @property
+    def LOG_DIR(self) -> str:
+        return os.path.join(self.REPO_PATH, "logs")
+
     # BACKEND_CORS_ORIGINS is a JSON-formatted list of origins
     # e.g: '["http://localhost", "http://localhost:4200", "http://localhost:3000", \
     # "http://localhost:8080", "http://local.dockertoolbox.tiangolo.com"]'
-    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3006"]
+    BACKEND_CORS_ORIGINS: list[str] = Field(default=["http://localhost:3006"])
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, urls: Union[str, list[str]]) -> Union[list[str], str]:
@@ -35,17 +46,15 @@ class Settings(BaseSettings):
             return urls
         raise ValueError(urls)
 
-    PROJECT_NAME: str = "minimal-ai"
+    PROJECT_NAME: str = Field(default="minimal-ai")
     # scheduler settings
-    SCHEDULER_DB_DIR: str = os.path.join(PIPELINES_DIR, 'scheduler')
-    THREAD_POOL_EXECUTOR: int = 20
-    PROCESS_POOL_EXECUTOR: int = 5
+    # SCHEDULER_DB_DIR: str = Field(
+    #     default=os.path.join(REPO_PATH.default, "scheduler"))
+    THREAD_POOL_EXECUTOR: int = Field(default=20)
+    PROCESS_POOL_EXECUTOR: int = Field(default=5)
 
-    class Config:
-        """
-            Config class
-        """
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        env_file=f"{os.getcwd()}.dev.env")
 
 
-settings = Settings()
+settings = Settings(_env_file=f"{ENV_FILE_PATH}/.dev.env")
