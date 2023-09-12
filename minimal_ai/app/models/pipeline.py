@@ -306,45 +306,51 @@ class Pipeline:
     async def execute(self, root_tasks: List) -> None:
         """method to execute the pipeline
         """
-        def create_task(task_conf: Dict):
-            async def build_and_execute():
-                task = Task.get_task_from_config(task_conf, self)
-                exec_data = await task.execute(spark)
-                self.tasks[task_conf['uuid']] = exec_data['task']
+        try:
+            def create_task(task_conf: Dict):
+                async def build_and_execute():
+                    task = Task.get_task_from_config(task_conf, self)
+                    exec_data = await task.execute(spark)
+                    self.tasks[task_conf['uuid']] = exec_data['task']
 
-            return asyncio.create_task(build_and_execute())
-        spark, spark_config = SparkMain(self.uuid).start_spark()
-        task_queue = Queue()
-        executed_tasks = {}
-        for _task in root_tasks:
-            task_queue.put(_task)
-            executed_tasks[_task] = None
+                return asyncio.create_task(build_and_execute())
+            spark, spark_config = SparkMain(self.uuid).start_spark()
+            task_queue = Queue()
+            executed_tasks = {}
+            for _task in root_tasks:
+                task_queue.put(_task)
+                executed_tasks[_task] = None
 
-        while not task_queue.empty():
-            task_uuid = task_queue.get()
-            task_conf = self.tasks[task_uuid]
+            while not task_queue.empty():
+                task_uuid = task_queue.get()
+                task_conf = self.tasks[task_uuid]
 
-            skip = False
-            for upstream_task in task_conf['upstream_tasks']:
-                if executed_tasks.get(upstream_task) is None:
-                    task_queue.put(task_uuid)
-                    skip = True
-                    break
-            if skip:
-                continue
+                skip = False
+                for upstream_task in task_conf['upstream_tasks']:
+                    if executed_tasks.get(upstream_task) is None:
+                        task_queue.put(task_uuid)
+                        skip = True
+                        break
+                if skip:
+                    continue
 
-            upstream_tasks = [executed_tasks[uuid]
-                              for uuid in task_conf['upstream_tasks']]
-            await asyncio.gather(*upstream_tasks)
+                upstream_tasks = [executed_tasks[uuid]
+                                  for uuid in task_conf['upstream_tasks']]
+                await asyncio.gather(*upstream_tasks)
 
-            task_stat = create_task(task_conf)
-            executed_tasks[task_uuid] = task_stat
-            for downstream_task in task_conf['downstream_tasks']:
-                if downstream_task not in executed_tasks:
-                    executed_tasks[downstream_task] = None
-                    task_queue.put(downstream_task)
-        remaining_tasks = filter(
-            lambda task: task is not None, executed_tasks.values())
-        await asyncio.gather(*remaining_tasks)
-        spark.stop()
-        self.save()
+                task_stat = create_task(task_conf)
+                executed_tasks[task_uuid] = task_stat
+                for downstream_task in task_conf['downstream_tasks']:
+                    if downstream_task not in executed_tasks:
+                        executed_tasks[downstream_task] = None
+                        task_queue.put(downstream_task)
+            remaining_tasks = filter(
+                lambda task: task is not None, executed_tasks.values())
+            await asyncio.gather(*remaining_tasks)
+            spark.stop()
+            self.status = PipelineStatus.EXECUTED
+            self.save()
+        except Exception as excep:
+            self.status = PipelineStatus.FAILED
+            raise MinimalETLException(
+                f'Pipeline - {self.uuid} failed to save | {excep.args}')

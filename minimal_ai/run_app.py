@@ -8,7 +8,6 @@ from minimal_ai.app.api.api_config import settings
 from minimal_ai.app.connections.bigquery import BigQuery
 from minimal_ai.app.services import PipelineService
 from minimal_ai.app.utils import excel_to_json
-from minimal_ai.run_server import start
 
 REPO_PATH_ENV_VAR = 'MINIMAL_REPO_PATH'
 VARIABLE_DIR = '.variable'
@@ -41,6 +40,7 @@ def init_project():
 def run_webserver():
     """command to start the webserver
     """
+    from minimal_ai.run_server import start
     start()
 
 

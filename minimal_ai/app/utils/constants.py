@@ -7,8 +7,10 @@ from pydantic import BaseModel
 class PipelineStatus(str, Enum):
     """Schedule status class
     """
+    EXECUTED = 'executed'
     SCHEDULED = 'scheduled'
     DRAFT = 'draft'
+    FAILED = 'failed'
 
 
 class TaskStatus(str, Enum):
@@ -21,8 +23,7 @@ class TaskStatus(str, Enum):
 
 
 class PipelineType(str, Enum):
-    """
-        Pipeline type to choose between pandas and pyspark
+    """Pipeline type to choose between pandas and pyspark
     """
     PYTHON = 'python'
     PYSPARK = 'pyspark'
@@ -105,12 +106,12 @@ class TransformerType(str, Enum):
 
 
 class JoinModel(BaseModel):
-    """
-    properties for join type transformer
+    """properties for join type transformer
     """
     left_table: str
     right_table: str
-    on: List[str]
+    left_on: List[str]
+    right_on: List[str]
     how: str
 
 

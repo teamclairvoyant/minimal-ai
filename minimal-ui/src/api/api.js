@@ -8,7 +8,7 @@ const apiInstance = axios.create({
 
 const backendApi = axios.create({
   baseURL: "http://localhost:4001",
-  timeout: 1000,
+  timeout: 250000,
   headers: { "X-Custom-Header": "foobar" },
 });
 

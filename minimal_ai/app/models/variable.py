@@ -1,16 +1,13 @@
+import json
 import logging
 import os
 import pickle
-from typing import Any
-from pyspark.sql.types import StructType
-from pyspark.sql import DataFrame
-from pyspark.sql import SparkSession
+from typing import Any, List
+
 import aiofiles
-import polars as pl
 from pydantic.dataclasses import dataclass
 
 from minimal_ai.app.services.minimal_exception import MinimalETLException
-
 from minimal_ai.app.utils.string_utils import clean_name
 
 logger = logging.getLogger(__name__)
@@ -32,13 +29,12 @@ class VariableManager:
         """
         return VariableManager(variables_dir=variables_dir)
 
-    def add_variable(
+    async def add_variable(
             self,
             pipeline_uuid: str,
             task_uuid: str,
             variable_uuid: str,
-            data: Any,
-            data_schema: StructType
+            data: Any
     ) -> None:
         """
         method to add variable and store data
@@ -54,7 +50,6 @@ class VariableManager:
             uuid=clean_name(variable_uuid),
             pipeline_uuid=pipeline_uuid,
             task_uuid=task_uuid,
-            data_schema=data_schema,
             data=data
         )
         # Delete data if it exists
@@ -80,9 +75,8 @@ class VariableManager:
 
     async def get_variable_data(
             self,
-            variable_uuid: str,
-            sample_count: int | None = None
-    ) -> 'Variable':
+            variable_uuid: str
+    ) -> List:
         """
         method to get variable object
         Args:
@@ -90,6 +84,7 @@ class VariableManager:
             sample_count (int): number of rows of the dataframe
 
         """
+        logger.info("Getting sample records task - %s", variable_uuid)
         variable = await Variable.get(self.variables_dir, variable_uuid)
 
         if not variable:
@@ -97,25 +92,18 @@ class VariableManager:
             raise MinimalETLException(
                 f'Variable - {variable_uuid} not loaded properly')
 
-        spark_sess = SparkSession.getActiveSession()
-        _df: DataFrame = spark_sess.createDataFrame(data=variable.data,schema=variable.data_schema)
-
-        if sample_count is not None:
-            if isinstance(variable.data, pl.DataFrame):
-                return variable.data.head(sample_count)
-
-        return _df
+        return [json.loads(i) for i in variable.data]
 
 
 class Config:
     arbitrary_types_allowed = True
+
 
 @dataclass(config=Config)
 class Variable:
     uuid: str
     pipeline_uuid: str
     task_uuid: str
-    data_schema: StructType
     data: Any
 
     @classmethod

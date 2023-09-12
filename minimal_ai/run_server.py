@@ -2,9 +2,12 @@ import logging
 import os
 import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Tuple
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 
 from minimal_ai.app.api.api_config import settings
@@ -53,7 +56,43 @@ if settings.BACKEND_CORS_ORIGINS:
     )
 
 
+class SinglePageApplication(StaticFiles):
+    """Acts similar to the bripkens/connect-history-api-fallback
+    NPM package."""
+
+    def __init__(self, directory: os.PathLike, index='index.html') -> None:
+        self.index = index
+
+        # set html=True to resolve the index even when no
+        # the base path is passed in
+        super().__init__(directory=directory, packages=None, html=True, check_dir=True)
+
+    def lookup_path(self, path: str) -> Tuple[str, os.stat_result]:
+        """Returns the index file when no match is found.
+
+        Args:
+            path (str): Resource path.
+
+        Returns:
+            [tuple[str, os.stat_result]]: Always retuens a full path and stat result.
+        """
+        full_path, stat_result = super().lookup_path(path)
+
+        # if a file cannot be found
+        if stat_result is None:
+            return super().lookup_path(self.index)  # type: ignore
+
+        return (full_path, stat_result)
+
+
 app.include_router(api_router, prefix=settings.API_STR)
+
+app.mount(
+    path='/',
+    app=SinglePageApplication(
+        directory=Path(__file__).resolve().parent/"static"),
+    name='SPA'
+)
 
 
 def start():

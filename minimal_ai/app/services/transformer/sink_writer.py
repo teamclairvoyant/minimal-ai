@@ -96,20 +96,20 @@ class SparkSinkWriter:
         except Exception as excep:
             logger.error(str(excep))
             raise MinimalETLException(str(excep))
-    
+
     async def bigquery_writer(self) -> None:
         """ method to write the df to bigquery
         """
         try:
             logger.info("writing dataframe to bigqury")
             _df: DataFrame = await DataframeUtils.get_df_from_alias(self.spark, self.current_task.upstream_tasks[0])
-            
+
             _df.write.format("bigquery").option("writeMethod", "direct")\
-            .mode("overwrite").save(f"{self.current_task.sink_config['dataset']}.{self.current_task.sink_config['table']}")
-            
+                .mode("overwrite").save(f"{self.current_task.sink_config['dataset']}.{self.current_task.sink_config['table']}")
+
             logger.info("Dataframe successfully loaded to bigquery at - %s.%s ",
-                        self.current_task.sink_config["dataset"],self.current_task.sink_config["table"])
-        
+                        self.current_task.sink_config["dataset"], self.current_task.sink_config["table"])
+
         except Exception as excep:
             logger.error(str(excep))
             raise MinimalETLException(str(excep))

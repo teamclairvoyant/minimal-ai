@@ -57,6 +57,28 @@ class TaskService:
         return pipeline.tasks[task_uuid]
 
     @staticmethod
+    async def get_sample_records(pipeline_uuid: str, task_uuid: str) -> Dict:
+        """method to fetch sample records from executed task
+
+        Args:
+            pipeline_uuid (str): uuid of pipeline
+            task_uuid (str): uuid of task
+        """
+        pipeline = await Pipeline.get_pipeline_async(pipeline_uuid)
+        logger.info('Pipeline - %s', pipeline.uuid)
+        if not pipeline.has_task(task_uuid):
+            logger.error('Task - %s not defined in pipeline - %s',
+                         task_uuid, pipeline_uuid)
+            raise MinimalETLException(
+                f'Task - {task_uuid} not defined in pipeline - {pipeline_uuid}')
+        task = Task.get_task_from_config(pipeline.tasks[task_uuid], pipeline)
+
+        data = await task.records
+
+        return {'columns': [{'field': key} for key in data[0].keys()],
+                'records': data}
+
+    @staticmethod
     async def get_all_tasks(pipeline_uuid: str) -> Dict:
         """ method to fetch all the tasks from the pipeline
 
@@ -156,11 +178,11 @@ class TaskService:
                                              task_config.config_properties)
         else:
             task_form = await request.form()
-            data_file: UploadFile = task_form.get('data_file')
+            data_file: UploadFile = task_form.get('data_file')  # type: ignore
             task_config = {'file_type': task_form.get('file_type'),
                            'file_name': data_file.filename}
             task.validate_configurations('file', task_config)
-            async with aiofiles.open(os.path.join(task.pipeline.variable_dir, task_config.get('file_name')),
+            async with aiofiles.open(os.path.join(task.pipeline.variable_dir, task_config.get('file_name')),  # type: ignore
                                      'wb') as file:
                 await file.write(await data_file.read())
 

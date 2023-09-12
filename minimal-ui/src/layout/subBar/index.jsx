@@ -36,9 +36,9 @@ export default function SubBar({onButtonClick}) {
           alignItems="center"
           spacing={{ xs: 0.5, sm: 10 }}
         >
-            <AppMenu menuName={"Source"} iconName={"material-symbols:database"} buttonColor={"#4e969f"} addNode={onButtonClick}></AppMenu>
-            <AppMenu menuName={"Transform"} iconName={"tabler:transform-filled"} buttonColor={"#7a20d1"} addNode={onButtonClick}></AppMenu>
-            <AppMenu menuName={"Target"} iconName={"solar:sim-cards-outline"} buttonColor={"#489f4e"} addNode={onButtonClick}></AppMenu>
+            <AppMenu menuName={"Source"} type={"input"} iconName={"material-symbols:add-circle"} buttonColor={"#4e969f"} addNode={onButtonClick}></AppMenu>
+            <AppMenu menuName={"Transform"} type={"default"} iconName={"tabler:transform-filled"} buttonColor={"#7a20d1"} addNode={onButtonClick}></AppMenu>
+            <AppMenu menuName={"Target"} type={"output"} iconName={"material-symbols:cloud-download-rounded"} buttonColor={"#489f4e"} addNode={onButtonClick}></AppMenu>
         </Stack>
     </RootStyle>
   );

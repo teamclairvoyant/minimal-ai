@@ -1,9 +1,12 @@
+import asyncio
 import logging
 import os
-from typing import Dict
+from typing import Any
 
 from google.cloud import storage
+from pydantic.dataclasses import dataclass
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import col
 
 from minimal_ai.app.services.minimal_exception import MinimalETLException
 
@@ -13,70 +16,94 @@ GS_FILE_PATH = "gs://{bucket_name}/{file_path}"
 logger = logging.getLogger(__name__)
 
 
-class SparkSourceReaders:
+class Config:
+    arbitrary_types_allowed = True
 
-    @staticmethod
-    def rdbms_reader(task_uuid: str, config: Dict, spark: SparkSession) -> None:
+
+@dataclass(config=Config)
+class SparkSourceReaders:
+    current_task: Any
+    spark: SparkSession
+
+    def rdbms_reader(self) -> None:
         """ registers dataframe from rdbms source
 
         Args:
             config (dict): database configurations
         """
 
-        match config['db_type']:
+        match self.current_task.loader_config['db_type']:
             case "mysql":
 
-                url = DB_MYSQL_URL.format(host=config.get('host'),
-                                          port=config.get('port'),
-                                          database=config.get('database'))
+                url = DB_MYSQL_URL.format(host=self.current_task.loader_config.get('host'),
+                                          port=self.current_task.loader_config.get(
+                                              'port'),
+                                          database=self.current_task.loader_config.get('database'))
 
                 _dict = {"url": url,
                          "driver": "com.mysql.cj.jdbc.Driver",
-                         "dbtable": config.get("table"),
-                         "user": config.get("user"),
-                         "password": config.get("password")}
+                         "dbtable": self.current_task.loader_config.get("table"),
+                         "user": self.current_task.loader_config.get("user"),
+                         "password": self.current_task.loader_config.get("password")}
 
-                _df = spark.read.format("jdbc").options(**_dict).load()
-
-                _df.createOrReplaceTempView(task_uuid)
+                _df = self.spark.read.format("jdbc").options(**_dict).load()
+                _df = _df.select(*(col(x).alias(x + f"_{self.current_task.uuid}")
+                                 for x in _df.columns))
+                _df.createOrReplaceTempView(self.current_task.uuid)
                 logger.info(
-                    "Successfully created data frame from source - %s", config['db_type'])
+                    "Successfully created data frame from source - %s", self.current_task.loader_config['db_type'])
 
             case _:
-                raise NotImplementedError(
-                    f"currently this database {config['db_type']} is not supported")
+                raise MinimalETLException(
+                    f"currently this database {self.current_task.loader_config['db_type']} is not supported")
 
-    @staticmethod
-    def local_file_reader(task_uuid: str, config: Dict, spark: SparkSession) -> None:
+        asyncio.create_task(self.current_task.pipeline.variable_manager.add_variable(
+            self.current_task.pipeline.uuid,
+            self.current_task.uuid,
+            self.current_task.uuid,
+            _df.toJSON().collect()
+        ))
+
+    def local_file_reader(self) -> None:
         """ registers dataframe from csv source
 
         Args:
             config (dict): file configurations
         """
 
-        logger.info("Loading data from file - %s", config['file_path'])
+        logger.info("Loading data from file - %s",
+                    self.current_task.loader_config['file_path'])
 
-        if not os.path.exists(config['file_path']):
-            logger.error('File path - %s does not exists', config['file_path'])
+        if not os.path.exists(self.current_task.loader_config['file_path']):
+            logger.error('File path - %s does not exists',
+                         self.current_task.loader_config['file_path'])
             raise MinimalETLException(
-                f'File path - {config["file_path"]} does not exists')
-        match config['file_type']:
+                f'File path - {self.current_task.loader_config["file_path"]} does not exists')
+
+        match self.current_task.loader_config['file_type']:
             case "csv":
                 _options = {"delimiter": ",",
                             "header": True}
 
-                spark.read.options(
-                    **_options).csv(config['file_path']).createOrReplaceTempView(task_uuid)
+                _df = self.spark.read.options(
+                    **_options).csv(self.current_task.loader_config['file_path'])
+                _df = _df.select(*(col(x).alias(x + f"_{self.current_task.uuid}")
+                                 for x in _df.columns))
+                _df.createOrReplaceTempView(self.current_task.uuid)
                 logger.info("Successfully created dataframe from CSV - %s",
-                            config['file_path'])
+                            self.current_task.loader_config['file_path'])
             case _:
-                logger.error('File type - %s not supported',
-                             config['file_type'])
                 raise MinimalETLException(
-                    f'File type - {config["file_type"]} not supported')
+                    f'File type - {self.current_task.loader_config["file_type"]} not supported')
 
-    @staticmethod
-    def gs_file_reader(task_uuid: str, config: Dict, spark: SparkSession) -> None:
+        asyncio.create_task(self.current_task.pipeline.variable_manager.add_variable(
+            self.current_task.pipeline.uuid,
+            self.current_task.uuid,
+            self.current_task.uuid,
+            _df.toJSON().collect()
+        ))
+
+    def gs_file_reader(self) -> None:
         """ registers dataframe from csv source
 
         Args:
@@ -84,29 +111,41 @@ class SparkSourceReaders:
         """
 
         logger.info("Loading data from file - %s in bucket - %s ",
-                    config['file_path'], config['bucket_name'])
+                    self.current_task.loader_config['file_path'], self.current_task.loader_config['bucket_name'])
         storage_client = storage.Client()
-        bucket = storage_client.bucket(config['bucket_name'])
-        blob_name = config['file_path']
+        bucket = storage_client.bucket(
+            self.current_task.loader_config['bucket_name'])
+        blob_name = self.current_task.loader_config['file_path']
 
         if not bucket.blob(blob_name).exists(storage_client):
             logger.error('File path - %s does not exists in bucket - %s',
-                         config['file_path'], config['bucket_name'])
+                         self.current_task.loader_config['file_path'], self.current_task.loader_config['bucket_name'])
             raise MinimalETLException(
-                f'File path - {config["file_path"]} does not exists')
+                f'File path - {self.current_task.loader_config["file_path"]} does not exists')
 
-        match config['file_type']:
+        match self.current_task.loader_config['file_type']:
             case "csv":
                 _options = {"delimiter": ",",
                             "header": True}
                 gs_f_path = GS_FILE_PATH.format(
-                    bucket_name=config['bucket_name'], file_path=config['file_path'])
-                spark.read.options(
-                    **_options).csv(gs_f_path).createOrReplaceTempView(task_uuid)
+                    bucket_name=self.current_task.loader_config['bucket_name'],
+                    file_path=self.current_task.loader_config['file_path'])
+                _df = self.spark.read.options(
+                    **_options).csv(gs_f_path)
+                _df = _df.select(*(col(x).alias(x + f"_{self.current_task.uuid}")
+                                 for x in _df.columns))
+                _df.createOrReplaceTempView(self.current_task.uuid)
                 logger.info("Successfully created dataframe from CSV - %s",
                             gs_f_path)
             case _:
                 logger.error('File type - %s not supported',
-                             config['file_type'])
+                             self.current_task.loader_config['file_type'])
                 raise MinimalETLException(
-                    f'File type - {config["file_type"]} not supported')
+                    f'File type - {self.current_task.loader_config["file_type"]} not supported')
+
+        asyncio.create_task(self.current_task.pipeline.variable_manager.add_variable(
+            self.current_task.pipeline.uuid,
+            self.current_task.uuid,
+            self.current_task.uuid,
+            _df.toJSON().collect()
+        ))

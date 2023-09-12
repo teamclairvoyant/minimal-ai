@@ -294,6 +294,27 @@ async def get_all_tasks_by_pipeline(uuid: str) -> JSONResponse:
         return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"error": excep.args})
 
 
+@api_router.get("/sample_data")
+async def get_sample_records(pipeline_uuid: str, task_uuid: str) -> JSONResponse:
+    """endpoint to get sample records from executed task
+
+    Args:
+        pipeline_uuid (str): uuid of the pipeline
+        task_uuid (str): uuid of the task
+    """
+    try:
+        logger.info("GET /sample_data - pipeline %s - task %s",
+                    pipeline_uuid, task_uuid)
+        data = await TaskService.get_sample_records(pipeline_uuid, task_uuid)
+
+        return JSONResponse(status_code=status.HTTP_200_OK,
+                            content=data)
+    except Exception as excep:
+        logger.error("GET /sample_data - pipeline %s - task %s | %s",
+                     pipeline_uuid, task_uuid, excep.args)
+        return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"error": excep.args})
+
+
 @api_router.delete("/pipeline/{pipeline_uuid}/task/{task_uuid}")
 async def delete_task_by_uuid(pipeline_uuid: str, task_uuid: str) -> JSONResponse:
     """ endpoint to delete task from a pipeline

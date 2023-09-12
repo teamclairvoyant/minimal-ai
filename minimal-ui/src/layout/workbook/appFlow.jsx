@@ -1,27 +1,27 @@
 /* eslint-disable react-hooks/exhaustive-deps */
+import { Drawer } from '@mui/material';
+import propTypes from "prop-types";
 import { useState } from 'react';
 import ReactFlow, {
-  ReactFlowProvider,
-  useNodesState,
-  useEdgesState,
-  addEdge,
-  useReactFlow,
-  Panel,
-  Controls,
   Background,
-  MarkerType
+  Controls,
+  MarkerType,
+  Panel,
+  ReactFlowProvider,
+  addEdge,
+  useEdgesState,
+  useNodesState,
+  useReactFlow
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import propTypes from "prop-types";
-import SubBar from "../subBar";
-import CustomNode from './CustomNode';
-import CustomEdge from './CustomEdge';
-import "../../assets/css/index.css"
-import { Drawer } from '@mui/material';
-import AppSidebar from './appSidebar';
+import { backendApi } from "../../api/api";
 import { pipelineStore } from "../../appState/pipelineStore";
-import { backendApi } from "../../api/api"
-import {formatNodeName} from '../../utils/formatString'
+import "../../assets/css/index.css";
+import { formatNodeName } from '../../utils/formatString';
+import SubBar from "../subBar";
+import CustomEdge from './CustomEdge';
+import CustomNode from './CustomNode';
+import AppSidebar from './appSidebar';
 
 
 const nodeTypes = {
@@ -77,6 +77,11 @@ const MainFlow = ({pipeline, setPipeline}) => {
     }
   }
 
+  const onExecute = async () => {
+    await backendApi.get(`/api/v1/pipeline/${pipeline.uuid}/execute`)
+  }
+
+
 
   const onRestore = () => {
     const restoreFlow = async () => {
@@ -94,18 +99,18 @@ const MainFlow = ({pipeline, setPipeline}) => {
   };
 
 
-  const onAdd = async (type,name,sourceType) => {
+  const onAdd = async (type,name) => {
     const response = await backendApi.post(`/api/v1/pipeline/${pipeline.uuid}/task`,{
       "name": name,
       "task_type": type === 'input' ? 'data_loader' : type === 'output' ? 'data_sink' : 'data_transformer',
       "upstream_task_uuids": null
     })
-    console.log(response.data.pipeline)
+
     setPipeline(response.data.pipeline)
     let task = response.data.pipeline.tasks[formatNodeName(name)]
     const newNode = {
       id: task.uuid,
-      data: { title: task.name, subline: '',type:`${type}`,source:sourceType },
+      data: { title: task.name, subline: '', type:`${type}` },
       type:'node',
       position: {
         x: Math.floor(Math.random() * 100),
@@ -141,6 +146,7 @@ const MainFlow = ({pipeline, setPipeline}) => {
           onNodeClick={nodeClick}
         >
           <Panel position="top-right">
+            <button onClick={onExecute}>Execute</button>
             <button onClick={onSave}>save</button>
             <button onClick={onRestore}>restore</button>
           </Panel>

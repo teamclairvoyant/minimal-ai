@@ -70,7 +70,7 @@ class Task:
             uuid=uuid,
             name=name,
             task_type=TaskType(task_type),
-            pipeline=pipeline)
+            pipeline=pipeline)  # type: ignore
 
         task.after_create(
             pipeline=pipeline,
@@ -198,6 +198,15 @@ class DataLoaderTask(Task):
             return True
         return False
 
+    @property
+    async def records(self) -> List:
+        """sample records from the task
+        """
+        if self.status == 'executed':
+            return await self.pipeline.variable_manager.get_variable_data(self.uuid)
+        raise MinimalETLException(
+            "Sample records not loaded. Execute the task to load the data")
+
     def base_dict_obj(self) -> Dict:
         """ method to get task dict object
         """
@@ -226,28 +235,28 @@ class DataLoaderTask(Task):
 
             match loader:
                 case "rdbms":
-                    _config = DBConfig.parse_obj(loader_config)
+                    _config = DBConfig.model_validate(loader_config)
                     logger.debug(_config)
                     logger.info('Configuring %s loader for task - %s',
                                 loader_type, self.uuid)
                     self.loader_type = loader
-                    self.loader_config = _config.dict()
+                    self.loader_config = _config.model_dump()
 
                 case "local_file":
-                    _config = FileConfig.parse_obj(loader_config)
+                    _config = FileConfig.model_validate(loader_config)
                     logger.debug(_config)
                     logger.info('Configuring %s loader for task - %s',
                                 loader_type, self.uuid)
                     self.loader_type = loader
-                    self.loader_config = _config.dict()
+                    self.loader_config = _config.model_dump()
 
                 case "gs_file":
-                    _config = GSFileConfig.parse_obj(loader_config)
+                    _config = GSFileConfig.model_validate(loader_config)
                     logger.debug(_config)
                     logger.info('Configuring %s loader for task - %s',
                                 loader_type, self.uuid)
                     self.loader_type = loader
-                    self.loader_config = _config.dict()
+                    self.loader_config = _config.model_dump()
 
                 case _:
                     logger.error('Loader type - %s not supported', loader_type)
@@ -277,16 +286,13 @@ class DataLoaderTask(Task):
 
         match self.loader_type:
             case "rdbms":
-                SparkSourceReaders.rdbms_reader(self.uuid,
-                                                self.loader_config, spark)
+                SparkSourceReaders(self, spark).rdbms_reader()
 
             case "local_file":
-                SparkSourceReaders.local_file_reader(
-                    self.uuid, self.loader_config, spark)
+                SparkSourceReaders(self, spark).local_file_reader()
 
             case "gs_file":
-                SparkSourceReaders.gs_file_reader(
-                    self.uuid, self.loader_config, spark)
+                SparkSourceReaders(self, spark).gs_file_reader()
 
             case _:
                 self.status = TaskStatus.FAILED
@@ -297,13 +303,6 @@ class DataLoaderTask(Task):
 
         self.status = TaskStatus.EXECUTED
 
-        # self.pipeline.variable_manager.add_variable(
-        #     self.pipeline.uuid,
-        #     self.uuid,
-        #     self.uuid,
-        #     loaded_data.collect(),
-        #     loaded_data.schema
-        # )
         return {
             'task': self.base_dict_obj(),
             'executed': self.status
@@ -340,7 +339,7 @@ class DataSinkTask(Task):
             'name': self.name,
             'status': self.status,
             'task_type': self.task_type,
-            'configure': self.is_configured,
+            'configured': self.is_configured,
             'upstream_tasks': self.upstream_tasks,
             'downstream_tasks': self.downstream_tasks,
             'sink_type': self.sink_type,
@@ -408,36 +407,36 @@ class DataSinkTask(Task):
 
         try:
             match SinkType(sink_type):
-                case "rdbmd":
-                    _config = DBConfig.parse_obj(sink_config)
+                case "rdbms":
+                    _config = DBConfig.model_validate(sink_config)
                     logger.debug(_config)
                     logger.info('Configuring %s sink for task - %s',
                                 sink_type, self.uuid)
                     self.sink_type = SinkType(sink_type)
-                    self.sink_config = _config.dict()
+                    self.sink_config = _config.model_dump()
 
                 case "local_file":
-                    _config = FileConfig.parse_obj(sink_config)
+                    _config = FileConfig.model_validate(sink_config)
                     logger.debug(_config)
                     logger.info('Configuring %s sink for task - %s',
                                 sink_type, self.uuid)
                     self.sink_type = SinkType(sink_type)
-                    self.sink_config = _config.dict()
+                    self.sink_config = _config.model_dump()
 
                 case "gs_file":
-                    _config = GSFileConfig.parse_obj(sink_config)
+                    _config = GSFileConfig.model_validate(sink_config)
                     logger.debug(_config)
                     logger.info('Configuring %s sink for task - %s',
                                 sink_type, self.uuid)
                     self.sink_type = SinkType(sink_type)
-                    self.sink_config = _config.dict()
+                    self.sink_config = _config.model_dump()
 
                 case "bigquery":
-                    _config = BigQueryConfig.parse_obj(sink_config)
+                    _config = BigQueryConfig.model_validate(sink_config)
                     logger.info('Configuring %s sink for task - %s',
                                 sink_type, self.uuid)
                     self.sink_type = SinkType(sink_type)
-                    self.sink_config = _config.dict()
+                    self.sink_config = _config.model_dump()
 
                 case _:
                     logger.error('Sink type - %s not supported', sink_type)
@@ -472,6 +471,15 @@ class DataTransformerTask(Task):
             return True
         return False
 
+    @property
+    async def records(self) -> List:
+        """sample records from the task
+        """
+        if self.status == 'executed':
+            return await self.pipeline.variable_manager.get_variable_data(self.uuid)
+        raise MinimalETLException(
+            "Sample records not loaded. Execute the task to load the data")
+
     def base_dict_obj(self) -> Dict:
         """ method to get task dict object
         """
@@ -497,35 +505,43 @@ class DataTransformerTask(Task):
         """
         try:
             transformer = TransformerType(transformer_type)
-            logger.debug(transformer)
+            logger.info(transformer)
+
             match transformer:
                 case "sparkAI":
-                    _config = FilterModel.parse_obj(transformer_config)
+                    _config = FilterModel.model_validate(transformer_config)
                     logger.debug(_config)
                     logger.info('Configuring %s transformer for task - %s',
                                 transformer_type, self.uuid)
                     self.transformer_type = transformer
-                    self.transformer_config = _config.dict()
+                    self.transformer_config = _config.model_dump()
 
                 case "join":
-                    _config = JoinModel.parse_obj(transformer_config)
+                    _config = JoinModel.model_validate(transformer_config)
                     logger.debug(_config)
                     logger.info('Configuring %s transformer for task - %s',
                                 transformer_type, self.uuid)
                     self.transformer_type = transformer
-                    self.transformer_config = _config.dict()
+                    self.transformer_config = _config.model_dump()
 
                 case "union":
                     logger.info('Configuring %s transformer for task - %s',
                                 transformer_type, self.uuid)
                     self.transformer_type = transformer
 
+                case "filter":
+                    logger.info('Configuring %s transformer for task - %s',
+                                transformer_type, self.uuid)
+                    _config = FilterModel.model_validate(transformer_config)
+                    self.transformer_type = transformer
+                    self.transformer_config = _config.model_dump()
+
                 case "pivot":
-                    _config = PivotModel.parse_obj(transformer_config)
+                    _config = PivotModel.model_validate(transformer_config)
                     logger.info('Configuring %s transformer for task - %s',
                                 transformer_type, self.uuid)
                     self.transformer_type = transformer
-                    self.transformer_config = _config.dict()
+                    self.transformer_config = _config.model_dump()
 
                 case _:
                     logger.error(

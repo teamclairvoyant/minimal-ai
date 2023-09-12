@@ -78,6 +78,7 @@ class SparkMain:
             # create Spark JAR packages string
             spark_jars_packages = ','.join(list(jar_packages))
             spark_builder.config('spark.jars.packages', spark_jars_packages)
+            spark_builder.config('spark.driver.bindAddress', "127.0.0.1")
 
             spark_files = ','.join(list(files))
             spark_builder.config('spark.files', spark_files)

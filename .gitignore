@@ -190,3 +190,4 @@ minimal-ui/dist-ssr
 *.njsproj
 *.sln
 *.sw?
+sample_data
