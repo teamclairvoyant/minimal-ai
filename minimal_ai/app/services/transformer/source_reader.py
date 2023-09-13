@@ -110,3 +110,32 @@ class SparkSourceReaders:
                              config['file_type'])
                 raise MinimalETLException(
                     f'File type - {config["file_type"]} not supported')
+
+    @staticmethod
+    def json_file_reader(task_uuid: str, config: Dict, spark: SparkSession) -> None:
+        """ register dataframe from json source
+
+        Args:
+            config (dict): file configurations
+        """
+
+        logger.info("Loading data from file - %s",config['file_path'])
+
+        if not os.path.exists(config['file_path']):
+            logger.error('File path - %s does not exist', config['file_path'])
+            raise MinimalETLException(
+                f'File path - {config["file_path"]} does not exist')
+
+        match config['file_type']:
+            case "json":
+                _options = {"multiline": "true"} # Handle multiple JSON files
+
+                spark.read.options(
+                    **_options).json(config['file_path']).createOrReplaceTempView(task_uuid)
+                logger.info("Successfully created dataframe from JSON - %s",
+                            config['file_path'])
+            case _:
+                logger.error('File type - %s not supported',
+                             config['file_type'])
+                raise MinimalETLException(
+                    f'File type - {config["file_type"]} not supported')
