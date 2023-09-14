@@ -56,7 +56,7 @@ export default function TaskListToolbar({
 }) {
 
   const [pipelineName, setPipelineName] = useState('');
-  const [, {setPipeline}] = pipelineStore()
+  const [, { setPipeline }] = pipelineStore()
 
   const handleChange = (event) => {
     setPipelineName(event.target.value);
@@ -65,24 +65,24 @@ export default function TaskListToolbar({
   const [open, setOpen] = useState(false);
 
   const handleClickOpen = () => {
-        setOpen(true);
-    };
+    setOpen(true);
+  };
 
   const handleClose = () => {
-        setOpen(false);
-    };
-  
+    setOpen(false);
+  };
+
   const navigate = useNavigate()
 
   async function createPipeline() {
-    const response = await backendApi.post("/api/v1/pipeline",{
+    const response = await backendApi.post("/api/v1/pipeline", {
       "name": pipelineName,
       "executor_config": {}
     })
-    
-    if (response.data.pipeline){
+
+    if (response.data.pipeline) {
       setPipeline(response.data.pipeline)
-      navigate(`app/${response.data.pipeline.uuid}`,{replace:true})
+      navigate(`app/${response.data.pipeline.uuid}`, { replace: true })
     }
 
   }
@@ -126,23 +126,23 @@ export default function TaskListToolbar({
           </Tooltip>
         ) : (
           <Button variant="contained" onClick={handleClickOpen} startIcon={<Iconify icon="eva:plus-fill" />}>
-                          New Pipeline
-                      </Button>
+            Create New Pipeline
+          </Button>
         )}
       </StyledRoot>
       <div>
         <Dialog open={open} onClose={handleClose}>
-            <DialogContent>
-                <TextField margin="dense" id="pipeline-name" onChange={handleChange} label="Pipeline Name" type="text" fullWidth variant="standard" />
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={handleClose}>Cancel</Button>
-                <Button onClick={createPipeline}>
-                  Create
-                </Button>
-            </DialogActions>
+          <DialogContent>
+            <TextField margin="dense" id="pipeline-name" onChange={handleChange} label="Pipeline Name" type="text" fullWidth variant="standard" />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleClose}>Cancel</Button>
+            <Button onClick={createPipeline}>
+              Create
+            </Button>
+          </DialogActions>
         </Dialog>
       </div>
-</>
+    </>
   );
 }

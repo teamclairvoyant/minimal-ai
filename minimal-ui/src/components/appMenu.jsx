@@ -1,5 +1,5 @@
-import {useState} from 'react';
-import {Button,Dialog,DialogContent,TextField,DialogActions} from '@mui/material';
+import { useState } from 'react';
+import { Button, Dialog, DialogContent, TextField, DialogActions, Stack } from '@mui/material';
 import propTypes from "prop-types"
 import Iconify from './Iconify';
 
@@ -13,10 +13,10 @@ AppMenu.propTypes = {
 }
 
 
-function ShowTaskModal(openModal, setOpenModal, type, addNode){
-    const[taskName, setTaskName] = useState('')
-    
-    return(
+function ShowTaskModal(openModal, setOpenModal, type, addNode) {
+    const [taskName, setTaskName] = useState('')
+
+    return (
         <div>
             <Dialog open={openModal} onClose={() => setOpenModal(false)}>
                 <DialogContent>
@@ -25,8 +25,9 @@ function ShowTaskModal(openModal, setOpenModal, type, addNode){
                 <DialogActions>
                     <Button onClick={() => setOpenModal(false)}>Cancel</Button>
                     <Button onClick={() => {
-                        addNode(type,taskName)
-                        setOpenModal(false)}}
+                        addNode(type, taskName)
+                        setOpenModal(false)
+                    }}
                     >
                         Create
                     </Button>
@@ -84,17 +85,18 @@ function ShowTaskModal(openModal, setOpenModal, type, addNode){
 // }
 
 
-export default function AppMenu({menuName, type, iconName, buttonColor, addNode}) {
+export default function AppMenu({ menuName, type, iconName, buttonColor, addNode }) {
 
     const [open, setOpen] = useState(false)
 
     return (
-        <div>
-            <Button variant="outlined" onClick={() => setOpen(true)} sx={{color:`${buttonColor}`,border:`1px solid ${buttonColor}`}} startIcon={<Iconify icon={iconName}/>}>
+        <Stack>
+            <Button variant="contained" color='secondary' onClick={() => setOpen(true)}
+                startIcon={<Iconify icon={iconName} />}
+            >
                 {menuName}
             </Button>
-            
             {ShowTaskModal(open, setOpen, type, addNode)}
-        </div>
+        </Stack>
     );
 }

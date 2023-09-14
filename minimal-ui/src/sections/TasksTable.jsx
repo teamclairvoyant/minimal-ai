@@ -14,8 +14,6 @@ import {
   TableContainer,
   TablePagination,
 } from "@mui/material";
-
-
 import SearchNotFound from "../components/SearchNotFound";
 import TaskListHead from "./TaskListHead";
 import TaskListToolbar from "./TaskListToolbar";
