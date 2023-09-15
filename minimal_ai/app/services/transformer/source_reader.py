@@ -47,8 +47,7 @@ class SparkSourceReaders:
                          "password": self.current_task.loader_config.get("password")}
 
                 _df = self.spark.read.format("jdbc").options(**_dict).load()
-                _df = _df.select(*(col(x).alias(x + f"_{self.current_task.uuid}")
-                                 for x in _df.columns))
+
                 _df.createOrReplaceTempView(self.current_task.uuid)
                 logger.info(
                     "Successfully created data frame from source - %s", self.current_task.loader_config['db_type'])
@@ -87,8 +86,7 @@ class SparkSourceReaders:
 
                 _df = self.spark.read.options(
                     **_options).csv(self.current_task.loader_config['file_path'])
-                _df = _df.select(*(col(x).alias(x + f"_{self.current_task.uuid}")
-                                 for x in _df.columns))
+
                 _df.createOrReplaceTempView(self.current_task.uuid)
                 logger.info("Successfully created dataframe from CSV - %s",
                             self.current_task.loader_config['file_path'])
@@ -132,8 +130,7 @@ class SparkSourceReaders:
                     file_path=self.current_task.loader_config['file_path'])
                 _df = self.spark.read.options(
                     **_options).csv(gs_f_path)
-                _df = _df.select(*(col(x).alias(x + f"_{self.current_task.uuid}")
-                                 for x in _df.columns))
+
                 _df.createOrReplaceTempView(self.current_task.uuid)
                 logger.info("Successfully created dataframe from CSV - %s",
                             gs_f_path)

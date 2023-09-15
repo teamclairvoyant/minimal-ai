@@ -46,7 +46,7 @@ function TransformConfig({closeBar,currNode}) {
     <MenuStyle>
             <div>
                 <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography sx={{ mb: 5 }}>Source</Typography>
+                    <Typography sx={{ mb: 5 }}>Type</Typography>
                     <TextField
                         select
                         onChange={(event) => (setTransType(event.target.value))}
@@ -234,7 +234,7 @@ const FilterConfig = ({closeBar,currNode}) => {
         <MenuStyle>
             <div>
                 <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography>Right on</Typography>
+                    <Typography>Filter Clause</Typography>
                     <TextField
                     type='text'
                     variant='outlined'

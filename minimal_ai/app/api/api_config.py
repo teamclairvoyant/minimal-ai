@@ -13,7 +13,8 @@ class Settings(BaseSettings):
     """
     API_STR: str = Field(default="/api/v1")
     SECRET_KEY: str = Field(default=secrets.token_urlsafe(32))
-    REPO_PATH: str = Field(default=os.path.join(os.getcwd(),'MINIMAL-AI-PROJECT'))
+    REPO_PATH: str = Field(default=os.path.join(
+        os.getcwd(), 'MINIMAL-AI-PROJECT'))
 
     @computed_field
     @property

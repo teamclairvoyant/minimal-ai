@@ -45,8 +45,7 @@ const MainFlow = ({pipeline, setPipeline}) => {
       let payload = {
         "upstream_task_uuids" : [params.source]
       }
-      const response = await backendApi.put(`/api/v1/pipeline/${pipeline.uuid}/task/${params.target}`,payload)
-      console.log(response.data)
+      await backendApi.put(`/api/v1/pipeline/${pipeline.uuid}/task/${params.target}`,payload)
     }
     
     setEdges((eds) => addEdge(params, eds))
