@@ -1,21 +1,20 @@
-import propTypes from 'prop-types'
-import {
-    Typography,
-    styled,
-    MenuItem,
-    TextField,
-    Stack,
-    RadioGroup,
-    FormControlLabel,
-    Radio,
-    Select,
-    InputLabel,
-    FormControl,
-    Button,
-} from '@mui/material'
-import { useState } from 'react'
 import { Check } from '@mui/icons-material';
-import { backendApi } from "../../api/api"
+import {
+    Button,
+    FormControl,
+    FormControlLabel,
+    InputLabel,
+    MenuItem,
+    Radio,
+    RadioGroup,
+    Select,
+    Stack,
+    TextField,
+    Typography,
+} from '@mui/material';
+import propTypes from 'prop-types';
+import { useState } from 'react';
+import { backendApi } from "../../api/api";
 import { pipelineStore } from "../../appState/pipelineStore";
 // -------------------------------------------------------
 
@@ -61,14 +60,14 @@ const FileArea = [
 ]
 
 
-const MenuStyle = styled('div')({
-    display: 'flex',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginLeft: 20
-});
+// const MenuStyle = styled('div')({
+//     display: 'flex',
+//     flexDirection: 'row',
+//     flexWrap: 'wrap',
+//     alignItems: 'center',
+//     justifyContent: 'space-between',
+//     marginLeft: 20
+// });
 
 SourceConfig.propTypes = {
     closeBar: propTypes.func,
@@ -92,6 +91,7 @@ function SourceConfig({ currNode, closeBar }) {
                 }}
             >
                 {sourceType.map(option => <FormControlLabel
+                    key={option.label}
                     value={option.value}
                     label={option.label}
                     control={<Radio />}
@@ -132,7 +132,10 @@ const ActionButtons = ({ handleSubmit, closeBar }) => {
     </Stack>
 }
 
-
+ActionButtons.propTypes = {
+    handleSubmit: propTypes.func,
+    closeBar: propTypes.func
+}
 //--------------------------------------------------------------
 
 const FileConfig = ({ closeBar, currNode }) => {
@@ -153,7 +156,7 @@ const FileConfig = ({ closeBar, currNode }) => {
                 "file_path": filePath
             }
         }
-        const response = await backendApi.put(`/api/v1/pipeline/${pipeline.uuid}/task/${task_id}`, payload)
+        const response = await backendApi.put(`/pipeline/${pipeline.uuid}/task/${task_id}`, payload)
 
         setPipeline(response.data.pipeline)
         closeBar()
@@ -276,7 +279,7 @@ const RdbmsConfig = ({ closeBar, currNode }) => {
             }
         }
 
-        const response = await backendApi.put(`/api/v1/pipeline/${pipeline.uuid}/task/${task_id}`, payload)
+        const response = await backendApi.put(`/pipeline/${pipeline.uuid}/task/${task_id}`, payload)
 
         setPipeline(response.data.pipeline)
         closeBar()

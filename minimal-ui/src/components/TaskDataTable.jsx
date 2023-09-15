@@ -31,7 +31,7 @@ export default function DataDialogs({open,setOpen, task}) {
 
     useEffect(() => {
         async function getTaskData() {
-            const response = await backendApi.get(`/api/v1/sample_data?pipeline_uuid=${pipeline.uuid}&task_uuid=${task}`);
+            const response = await backendApi.get(`/sample_data?pipeline_uuid=${pipeline.uuid}&task_uuid=${task}`);
             // console.log(response.data)
             setSampleRecords(response.data);
           }

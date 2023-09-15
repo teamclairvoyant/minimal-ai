@@ -1,9 +1,9 @@
-import { Grid, Container, Typography } from '@mui/material';
+import { Container, Grid, Typography } from '@mui/material';
+import { useEffect, useState } from 'react';
+import { backendApi } from '../../api/api';
 import Page from '../../components/Page';
 import AppWidgetSummary from '../../sections/AppWidgetSummary';
 import TasksTable from '../../sections/TasksTable';
-import { useState, useEffect } from 'react';
-import { backendApi } from '../../api/api';
 
 const DUMMY = {"total_pipelines":2,"scheduled_count":3,"successful_count":4,"failed_count":1};
 
@@ -12,7 +12,7 @@ export default function WorkbookHome() {
 
   useEffect(() => {
     async function getSummary() {
-      const response = await backendApi.get("/api/v1/summary");
+      const response = await backendApi.get("/summary");
       if (response.data) {
         setSummary(response.data.summary);
       }

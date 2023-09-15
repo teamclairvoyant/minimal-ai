@@ -41,7 +41,7 @@ const MainFlow = ({ pipeline, setPipeline }) => {
   const [showAppBar, setShowAppBar] = useState(false)
 
   useEffect(() => {
-    if (pipeline) {
+    if (pipeline.reactflow_props) {
       const restoreFlow = async () => {
         const flow = pipeline.reactflow_props;
 
@@ -62,8 +62,7 @@ const MainFlow = ({ pipeline, setPipeline }) => {
       let payload = {
         "upstream_task_uuids": [params.source]
       }
-      const response = await backendApi.put(`/api/v1/pipeline/${pipeline.uuid}/task/${params.target}`, payload);
-      console.log(response.data)
+      await backendApi.put(`/pipeline/${pipeline.uuid}/task/${params.target}`,payload)
     }
 
     setEdges((eds) => addEdge(params, eds))
@@ -87,7 +86,7 @@ const MainFlow = ({ pipeline, setPipeline }) => {
   const onSave = async () => {
     if (rfInstance) {
       const flow = rfInstance.toObject();
-      const response = await backendApi.put(`/api/v1/pipeline/${pipeline.uuid}`, {
+      const response = await backendApi.put(`/pipeline/${pipeline.uuid}`, {
         "reactflow_props": flow
       })
       setPipeline(response.data.pipeline)
@@ -95,7 +94,7 @@ const MainFlow = ({ pipeline, setPipeline }) => {
   }
 
   const onExecute = async () => {
-    await backendApi.get(`/api/v1/pipeline/${pipeline.uuid}/execute`)
+    await backendApi.get(`/pipeline/${pipeline.uuid}/execute`)
   }
 
 
@@ -117,7 +116,7 @@ const MainFlow = ({ pipeline, setPipeline }) => {
 
 
   const onAdd = async (type, name) => {
-    const response = await backendApi.post(`/api/v1/pipeline/${pipeline.uuid}/task`, {
+    const response = await backendApi.post(`/pipeline/${pipeline.uuid}/task`, {
       "name": name,
       "task_type": type === 'input' ? 'data_loader' : type === 'output' ? 'data_sink' : 'data_transformer',
       "upstream_task_uuids": null

@@ -126,7 +126,7 @@ const FileConfig = ({closeBar, currNode}) => {
                 "file_path": filePath
             } 
         }
-        const response = await backendApi.put(`/api/v1/pipeline/${pipeline.uuid}/task/${task_id}`,payload)
+        const response = await backendApi.put(`/pipeline/${pipeline.uuid}/task/${task_id}`,payload)
 
         setPipeline(response.data.pipeline)
         closeBar()
@@ -278,7 +278,7 @@ const RdbmsConfig = ({closeBar, currNode}) => {
             } 
         }
 
-        const response = await backendApi.put(`/api/v1/pipeline/${pipeline.uuid}/task/${task_id}`,payload)
+        const response = await backendApi.put(`/pipeline/${pipeline.uuid}/task/${task_id}`,payload)
 
         setPipeline(response.data.pipeline)
         closeBar()

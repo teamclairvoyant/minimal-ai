@@ -191,3 +191,4 @@ minimal-ui/dist-ssr
 *.sln
 *.sw?
 sample_data
+*project

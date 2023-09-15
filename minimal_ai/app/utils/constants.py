@@ -118,7 +118,7 @@ class JoinModel(BaseModel):
 class FilterModel(BaseModel):
     """properties for filter transformer
     """
-    prompt: str
+    filter: str
 
 
 class PivotModel(BaseModel):

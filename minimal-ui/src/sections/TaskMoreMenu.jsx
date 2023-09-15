@@ -1,10 +1,10 @@
 /* eslint-disable no-unused-vars */
+import { IconButton, ListItemIcon, ListItemText, Menu, MenuItem } from '@mui/material';
+import PropTypes from "prop-types";
 import { useRef, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { Menu, MenuItem, IconButton, ListItemIcon, ListItemText } from '@mui/material';
+import { backendApi } from '../api/api';
 import Iconify from '../components/Iconify';
-import PropTypes from "prop-types";
-import { apiInstance } from '../api/api';
 
 
 
@@ -18,7 +18,7 @@ export default function TaskMoreMenu(props) {
     const [execDetails, setExecDetails]  = useState({})
 
     const execute = async (uuid) => {
-        const response = await apiInstance.get(`/${uuid}/execute`);
+        const response = await backendApi.get(`/pipeline/${uuid}/execute`);
         setExecDetails(await response.data());
 
     };

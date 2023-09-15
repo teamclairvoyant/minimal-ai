@@ -1,23 +1,23 @@
-import PropTypes from "prop-types";
-import { styled, alpha } from "@mui/material/styles";
 import {
-  Toolbar,
-  Tooltip,
-  IconButton,
-  Typography,
-  OutlinedInput,
-  InputAdornment,
   Button,
+  Dialog,
   DialogActions,
   DialogContent,
-  Dialog,
-  TextField
+  IconButton,
+  InputAdornment,
+  OutlinedInput,
+  TextField,
+  Toolbar,
+  Tooltip,
+  Typography
 } from "@mui/material";
-import Iconify from "../components/Iconify";
-import { useNavigate } from 'react-router-dom';
+import { alpha, styled } from "@mui/material/styles";
+import PropTypes from "prop-types";
 import { useState } from "react";
+import { useNavigate } from 'react-router-dom';
 import { backendApi } from "../api/api";
 import { pipelineStore } from "../appState/pipelineStore";
+import Iconify from "../components/Iconify";
 
 
 const StyledRoot = styled(Toolbar)(({ theme }) => ({
@@ -75,7 +75,7 @@ export default function TaskListToolbar({
   const navigate = useNavigate()
 
   async function createPipeline() {
-    const response = await backendApi.post("/api/v1/pipeline", {
+    const response = await backendApi.post("/pipeline", {
       "name": pipelineName,
       "executor_config": {}
     })
