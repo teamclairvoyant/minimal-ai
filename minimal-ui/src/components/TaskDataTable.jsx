@@ -3,21 +3,13 @@ import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
-import { styled } from '@mui/material/styles';
+
 import { DataGrid } from '@mui/x-data-grid';
 import propTypes from "prop-types";
 import { useEffect, useState } from 'react';
 import { backendApi } from '../api/api';
 import { pipelineStore } from '../appState/pipelineStore';
 
-const BootstrapDialog = styled(Dialog)(({ theme }) => ({
-  '& .MuiDialogContent-root': {
-    padding: theme.spacing(2),
-  },
-  '& .MuiDialogActions-root': {
-    padding: theme.spacing(1),
-  },
-}));
 
 DataDialogs.propTypes = {
     open: propTypes.bool,
@@ -41,8 +33,10 @@ export default function DataDialogs({open,setOpen, task}) {
 
     return (
         <div>
-        <BootstrapDialog
+        <Dialog
             onClose={() => setOpen(false)}
+            fullWidth={true}
+            maxWidth={'xl'}
             aria-labelledby="customized-dialog-title"
             open={open}
         >
@@ -64,7 +58,7 @@ export default function DataDialogs({open,setOpen, task}) {
             <DialogContent dividers>
             <DataTable data={sampleRecords}/>
             </DialogContent>
-        </BootstrapDialog>
+        </Dialog>
         </div>
     )}
 }

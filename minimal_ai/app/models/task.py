@@ -250,7 +250,7 @@ class DataLoaderTask(Task):
                     self.loader_type = loader
                     self.loader_config = _config.model_dump()
 
-                case "gs_file":
+                case "gcp_bucket":
                     _config = GSFileConfig.model_validate(loader_config)
                     logger.debug(_config)
                     logger.info('Configuring %s loader for task - %s',
@@ -291,7 +291,7 @@ class DataLoaderTask(Task):
             case "local_file":
                 SparkSourceReaders(self, spark).local_file_reader()
 
-            case "gs_file":
+            case "gcp_bucket":
                 SparkSourceReaders(self, spark).gs_file_reader()
 
             case _:
@@ -378,7 +378,7 @@ class DataSinkTask(Task):
             case "local_file":
                 await SparkSinkWriter(self, spark).local_file_writer()
 
-            case "gs_file":
+            case "gcp_bucket":
                 await SparkSinkWriter(self, spark).gs_file_writer()
 
             case "bigquery":
@@ -423,7 +423,7 @@ class DataSinkTask(Task):
                     self.sink_type = SinkType(sink_type)
                     self.sink_config = _config.model_dump()
 
-                case "gs_file":
+                case "gcp_bucket":
                     _config = GSFileConfig.model_validate(sink_config)
                     logger.debug(_config)
                     logger.info('Configuring %s sink for task - %s',

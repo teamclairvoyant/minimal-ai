@@ -11,6 +11,7 @@ import {
     Stack,
     TextField,
     Typography,
+    styled
 } from '@mui/material';
 import propTypes from 'prop-types';
 import { useState } from 'react';
@@ -60,14 +61,13 @@ const FileArea = [
 ]
 
 
-// const MenuStyle = styled('div')({
-//     display: 'flex',
-//     flexDirection: 'row',
-//     flexWrap: 'wrap',
-//     alignItems: 'center',
-//     justifyContent: 'space-between',
-//     marginLeft: 20
-// });
+const MenuStyle = styled(Stack)({
+    maxHeight: 400,
+    overflow: 'auto',
+    padding: 16,
+    gap: 16,
+    flexGrow: 1
+});
 
 SourceConfig.propTypes = {
     closeBar: propTypes.func,
@@ -143,17 +143,33 @@ const FileConfig = ({ closeBar, currNode }) => {
     const [fileType, setFileType] = useState('')
     const [filePath, setFilePath] = useState('')
     const [bucketName, setBucketName] = useState('')
+    const [keyPath, setKeyPath] = useState('')
     const [showBucketField, setShowBucketField] = useState(false)
     const [{ pipeline }, { setPipeline }] = pipelineStore()
 
 
     async function handleSubmit() {
         let task_id = currNode.id
-        let payload = {
-            "config_type": fileArea,
-            "config_properties": {
-                "file_type": fileType,
-                "file_path": filePath
+        var payload = {}
+        if (fileArea === 'gcp_bucket' || fileArea === 'aws_s3')
+        {
+            payload = {
+                "config_type": fileArea,
+                "config_properties": {
+                    "file_type": fileType,
+                    "bucket_name": bucketName,
+                    "key_file": keyPath,
+                    "file_path": filePath
+                }
+            }
+        }
+        else {
+            payload = {
+                "config_type": fileArea,
+                "config_properties": {
+                    "file_type": fileType,
+                    "file_path": filePath
+                }
             }
         }
         const response = await backendApi.put(`/pipeline/${pipeline.uuid}/task/${task_id}`, payload)
@@ -172,7 +188,7 @@ const FileConfig = ({ closeBar, currNode }) => {
 
     return (
         <>
-            <Stack flexGrow={1} padding={2} spacing={4}>
+            <MenuStyle>
                 <FormControl fullWidth variant='standard'>
                     <InputLabel id="select-file-area">File Area</InputLabel>
                     <Select
@@ -190,15 +206,26 @@ const FileConfig = ({ closeBar, currNode }) => {
                     </Select>
                 </FormControl>
                 {showBucketField && (
-                    <TextField
-                        id="source-bucket-name"
-                        variant='standard'
-                        value={bucketName}
-                        label="Bucket Name"
-                        helperText="Enter the name of the bucket where the file is located"
-                        required
-                        onChange={e => setBucketName(e.target.value)}
-                    />
+                    <>
+                        <TextField
+                            id="source-bucket-name"
+                            variant='standard'
+                            value={bucketName}
+                            label="Bucket Name"
+                            helperText="Enter the name of the bucket where the file is located"
+                            required
+                            onChange={e => setBucketName(e.target.value)}
+                        />
+                        <TextField
+                            id="source-key-path"
+                            variant='standard'
+                            value={keyPath}
+                            label="key path"
+                            helperText="Enter the path of the service key file"
+                            required
+                            onChange={e => setKeyPath(e.target.value)}
+                        />
+                    </>
                 )}
                 <FormControl fullWidth variant='standard' placeholder='Please select the type of the file'>
                     <InputLabel id="select-file-type">File Type</InputLabel>
@@ -226,7 +253,7 @@ const FileConfig = ({ closeBar, currNode }) => {
                     helperText="Enter the path of the file"
                     required
                 />
-            </Stack>
+            </MenuStyle>
             <ActionButtons
                 closeBar={closeBar}
                 handleSubmit={handleSubmit}
@@ -287,7 +314,7 @@ const RdbmsConfig = ({ closeBar, currNode }) => {
 
     return (
         <>
-            <Stack flexGrow={1} padding={2} spacing={4}>
+            <MenuStyle>
                 <FormControl fullWidth variant='standard' required>
                     <InputLabel id="select-file-area">Database Type</InputLabel>
                     <Select
@@ -366,7 +393,7 @@ const RdbmsConfig = ({ closeBar, currNode }) => {
                     helperText="Enter the name of the database table"
                     required
                 />
-            </Stack>
+            </MenuStyle>
 
             <ActionButtons
                 closeBar={closeBar}

@@ -3,10 +3,8 @@ import logging
 import os
 from typing import Any
 
-from google.cloud import storage
 from pydantic.dataclasses import dataclass
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
 
 from minimal_ai.app.services.minimal_exception import MinimalETLException
 
@@ -110,24 +108,19 @@ class SparkSourceReaders:
 
         logger.info("Loading data from file - %s in bucket - %s ",
                     self.current_task.loader_config['file_path'], self.current_task.loader_config['bucket_name'])
-        storage_client = storage.Client()
-        bucket = storage_client.bucket(
-            self.current_task.loader_config['bucket_name'])
-        blob_name = self.current_task.loader_config['file_path']
 
-        if not bucket.blob(blob_name).exists(storage_client):
-            logger.error('File path - %s does not exists in bucket - %s',
-                         self.current_task.loader_config['file_path'], self.current_task.loader_config['bucket_name'])
-            raise MinimalETLException(
-                f'File path - {self.current_task.loader_config["file_path"]} does not exists')
+        gs_f_path = GS_FILE_PATH.format(
+            bucket_name=self.current_task.loader_config['bucket_name'],
+            file_path=self.current_task.loader_config['file_path'])
+
+        self.spark._jsc.hadoopConfiguration().set("google.cloud.auth.service.account.json.keyfile",
+                                                  self.current_task.loader_config['key_file'])
 
         match self.current_task.loader_config['file_type']:
             case "csv":
                 _options = {"delimiter": ",",
                             "header": True}
-                gs_f_path = GS_FILE_PATH.format(
-                    bucket_name=self.current_task.loader_config['bucket_name'],
-                    file_path=self.current_task.loader_config['file_path'])
+
                 _df = self.spark.read.options(
                     **_options).csv(gs_f_path)
 
