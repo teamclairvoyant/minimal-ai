@@ -149,3 +149,34 @@ class SparkSourceReaders:
             self.current_task.uuid,
             _df.toJSON().collect()
         ))
+    def json_file_reader(self) -> None:
+        """ registers dataframe from csv source
+
+        Args:
+            config (dict): file configurations
+        """
+         
+        logger.info("Loading data from JSON file - %s",
+                     self.current_task.loader_config['file_path'])
+        
+        if not os.path.exists(self.current_task.loader_config['file_path']):
+           logger.error('File path - %s does not exist',
+                        self.current_task.loader_config['file_path'])
+           raise MinimalETLException(
+               f'File path - {self.current_task.loader_config["file_path"]} does not exist')
+        
+        _options = {"multiline": True} # If JSON file has multiline records
+        _df = self.spark.read.options(**_options).json(
+            self.current_task.loader_config['file_path'])
+        _df = _df.select(*(col(x).alias(x + f"_{self.current_task.uuid}")
+                           for x in _df.columns))
+        _df.createOrReplaceTempView(self.current_task.uuid)
+        logger.info("Successfully created dataframe from JSON - %s",
+                    self.current_task.loader_config['file_path'])
+        
+        asyncio.create_task(self.current_task.pipeline.variable_manager.add_variable(
+            self.current_task.pipeline.uuid,
+            self.current_task.uuid,
+            self.current_task.uuid,
+            _df.toJSON().collect()
+        ))
