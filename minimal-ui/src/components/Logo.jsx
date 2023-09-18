@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import { Link as RouterLink } from 'react-router-dom';
-import { Box } from '@mui/material';
+import { Box, Paper } from '@mui/material';
 import {Typography} from '@mui/material';
 
 Logo.propTypes = {
@@ -10,13 +10,10 @@ Logo.propTypes = {
 
 export default function Logo({ disabledLink = false, sx }) {
 
-
     const logo = (
-        <Box sx={{ width: 40, height: 40, ...sx }}>
-            <Typography variant="overline">
-                Logo
-            </Typography>
-        </Box>
+        <Paper sx={{ width: 65, ...sx }}>
+            <img  src='../src/assets/images/EXL_Service_logo.png'/>
+        </Paper>
     );
 
     if (disabledLink) {

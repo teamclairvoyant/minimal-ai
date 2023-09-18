@@ -82,16 +82,17 @@ class VariableType(str, Enum):
 class LoaderType(str, Enum):
     """ Supported loader type """
     LOCAL_FILE = 'local_file'
-    GS_FILE = 'gs_file'
+    GCP_BUCKET = 'gcp_bucket'
     S3_FILE = 's3_file'
     RDBMS = 'rdbms'
+    BIGQUERY = 'bigquery'
 
 
 class SinkType(str, Enum):
     """ Supported sink type """
     LOCAL_FILE = 'local_file'
     RDBMS = 'rdbms'
-    GS_FILE = 'gs_file'
+    GCP_BUCKET = 'gcp_bucket'
     S3_FILE = 's3_file'
     BIGQUERY = 'bigquery'
 
@@ -154,6 +155,8 @@ class FileConfig(BaseModel):
     """ properties for file type configurations
     """
     file_type: str
+    bucket_name: str | None = None
+    key_file: str | None = None
     file_path: str
 
 
@@ -161,6 +164,7 @@ class GSFileConfig(BaseModel):
     """ properties for file type configurations
     """
     bucket_name: str
+    key_file: str
     file_type: str
     file_path: str
 

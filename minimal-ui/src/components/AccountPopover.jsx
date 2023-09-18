@@ -3,6 +3,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { alpha } from '@mui/material/styles';
 import { Box, Divider, Typography, Stack, MenuItem, Avatar, IconButton } from '@mui/material';
 import MenuPopover from './MenuPopover';
+import { deepOrange } from '@mui/material/colors';
 
 
 const MENU_OPTIONS = [
@@ -47,7 +48,7 @@ export default function AccountPopover() {
                     })
                 }}
             >
-                <Avatar src={'#'} alt="photoURL" />
+                <Avatar sx={{ bgcolor: deepOrange[500] }}>U</Avatar>
             </IconButton>
 
             <MenuPopover

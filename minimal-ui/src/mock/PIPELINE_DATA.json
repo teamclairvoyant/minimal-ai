@@ -1,0 +1,213 @@
+{
+    "name": "example pipeline",
+    "uuid": "example_pipeline",
+    "executor_config": {},
+    "tasks": {
+        "bankloan1": {
+            "uuid": "bankloan1",
+            "name": "bankloan1",
+            "status": "executed",
+            "task_type": "data_loader",
+            "configured": true,
+            "upstream_tasks": [],
+            "downstream_tasks": [
+                "join_data"
+            ],
+            "loader_type": "local_file",
+            "loader_config": {
+                "file_type": "csv",
+                "file_path": "/Users/kumar/Documents/workbook/minimal-ai/sample_data/bankloan1.csv"
+            }
+        },
+        "bankloan2": {
+            "uuid": "bankloan2",
+            "name": "bankloan2",
+            "status": "executed",
+            "task_type": "data_loader",
+            "configured": true,
+            "upstream_tasks": [],
+            "downstream_tasks": [
+                "join_data"
+            ],
+            "loader_type": "local_file",
+            "loader_config": {
+                "file_type": "csv",
+                "file_path": "/Users/kumar/Documents/workbook/minimal-ai/sample_data/bankloan2.csv"
+            }
+        },
+        "join_data": {
+            "uuid": "join_data",
+            "name": "join data",
+            "status": "executed",
+            "task_type": "data_transformer",
+            "configured": true,
+            "upstream_tasks": [
+                "bankloan1",
+                "bankloan2"
+            ],
+            "downstream_tasks": [
+                "file_save"
+            ],
+            "transformer_type": "join",
+            "transformer_config": {
+                "left_table": "bankloan1",
+                "right_table": "bankloan2",
+                "left_on": [
+                    "ID"
+                ],
+                "right_on": [
+                    "ID"
+                ],
+                "how": "left"
+            }
+        },
+        "file_save": {
+            "uuid": "file_save",
+            "name": "file save",
+            "status": "executed",
+            "task_type": "data_sink",
+            "configured": true,
+            "upstream_tasks": [
+                "join_data"
+            ],
+            "downstream_tasks": [],
+            "sink_type": "local_file",
+            "sink_config": {
+                "file_type": "csv",
+                "file_path": "/Users/kumar/Documents/workbook/minimal-ai/sample_data/minimal_join_test2.csv"
+            }
+        }
+    },
+    "status": "executed",
+    "reactflow_props": {
+        "nodes": [
+            {
+                "width": 129,
+                "height": 70,
+                "id": "bankloan1",
+                "data": {
+                    "title": "bankloan1",
+                    "subline": "",
+                    "type": "input"
+                },
+                "type": "node",
+                "position": {
+                    "x": 188,
+                    "y": 131
+                },
+                "selected": false,
+                "positionAbsolute": {
+                    "x": 188,
+                    "y": 131
+                },
+                "dragging": false
+            },
+            {
+                "width": 129,
+                "height": 70,
+                "id": "bankloan2",
+                "data": {
+                    "title": "bankloan2",
+                    "subline": "",
+                    "type": "input"
+                },
+                "type": "node",
+                "position": {
+                    "x": 188,
+                    "y": 261
+                },
+                "selected": false,
+                "positionAbsolute": {
+                    "x": 188,
+                    "y": 261
+                },
+                "dragging": false
+            },
+            {
+                "width": 129,
+                "height": 70,
+                "id": "join_data",
+                "data": {
+                    "title": "join data",
+                    "subline": "",
+                    "type": "default"
+                },
+                "type": "node",
+                "position": {
+                    "x": 522,
+                    "y": 195
+                },
+                "selected": false,
+                "positionAbsolute": {
+                    "x": 522,
+                    "y": 195
+                },
+                "dragging": false
+            },
+            {
+                "width": 129,
+                "height": 70,
+                "id": "file_save",
+                "data": {
+                    "title": "file save",
+                    "subline": "",
+                    "type": "output"
+                },
+                "type": "node",
+                "position": {
+                    "x": 853,
+                    "y": 196
+                },
+                "selected": false,
+                "positionAbsolute": {
+                    "x": 853,
+                    "y": 196
+                },
+                "dragging": false
+            }
+        ],
+        "edges": [
+            {
+                "animated": true,
+                "type": "turbo",
+                "markerEnd": {
+                    "type": "arrowclosed"
+                },
+                "source": "bankloan1",
+                "sourceHandle": null,
+                "target": "join_data",
+                "targetHandle": null,
+                "id": "reactflow__edge-bankloan1-join_data"
+            },
+            {
+                "animated": true,
+                "type": "turbo",
+                "markerEnd": {
+                    "type": "arrowclosed"
+                },
+                "source": "bankloan2",
+                "sourceHandle": null,
+                "target": "join_data",
+                "targetHandle": null,
+                "id": "reactflow__edge-bankloan2-join_data"
+            },
+            {
+                "animated": true,
+                "type": "turbo",
+                "markerEnd": {
+                    "type": "arrowclosed"
+                },
+                "source": "join_data",
+                "sourceHandle": null,
+                "target": "file_save",
+                "targetHandle": null,
+                "id": "reactflow__edge-join_data-file_save"
+            }
+        ],
+        "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+        }
+    }
+}

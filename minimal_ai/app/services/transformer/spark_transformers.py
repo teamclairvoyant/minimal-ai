@@ -57,7 +57,7 @@ class SparkTransformer:
                 self.current_task.pipeline.uuid,
                 self.current_task.uuid,
                 self.current_task.uuid,
-                _df.toJSON().collect()
+                _df.toJSON().take(200)
             ))
         except Exception as excep:
             raise MinimalETLException(
@@ -84,7 +84,7 @@ class SparkTransformer:
                 self.current_task.pipeline.uuid,
                 self.current_task.uuid,
                 self.current_task.uuid,
-                _df_ai.toJSON().collect()
+                _df_ai.toJSON().take(200)
             ))
         except Exception as excep:
             raise MinimalETLException(
@@ -136,7 +136,7 @@ class SparkTransformer:
                 self.current_task.pipeline.uuid,
                 self.current_task.uuid,
                 self.current_task.uuid,
-                _df.toJSON().collect()
+                _df.toJSON().take(200)
             ))
         except Exception as excep:
             logger.info(excep)

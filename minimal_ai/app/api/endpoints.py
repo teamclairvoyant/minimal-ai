@@ -349,10 +349,10 @@ async def update_task(pipeline_uuid: str, task_uuid: str,
 
     try:
         logger.info("PUT /pipeline/%s/task/%s", pipeline_uuid, task_uuid)
-        task = await TaskService.update_task_by_config(pipeline_uuid, task_uuid, request)
+        pipeline = await TaskService.update_task_by_config(pipeline_uuid, task_uuid, request)
 
         return JSONResponse(status_code=status.HTTP_200_OK,
-                            content={'pipeline': task})
+                            content={'pipeline': pipeline})
 
     except MinimalETLException as excep:
         logger.error("PUT /pipeline/%s/task/%s | %s",

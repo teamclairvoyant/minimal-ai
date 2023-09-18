@@ -58,7 +58,7 @@ class SparkMain:
 
         # detect execution environment
         flag_repl = not hasattr(__main__, '__file__')
-        flag_debug = 'DEBUG' in environ.keys()  # type: ignore
+        flag_debug = 'DEBUG' in environ
         logger.info(
             "Starting spark session -> %s", self.app_name)
         if not (flag_repl or flag_debug):

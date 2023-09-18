@@ -1,14 +1,21 @@
-import propTypes from 'prop-types'
-import { Typography,
-    styled,
-    MenuItem, 
-    TextField,
+import { Check } from '@mui/icons-material';
+import {
+    Button,
+    FormControl,
+    FormControlLabel,
+    InputLabel,
+    MenuItem,
+    Radio,
+    RadioGroup,
+    Select,
     Stack,
-    Fab} from '@mui/material'
-import { useState } from 'react'
-import SaveIcon from '@mui/icons-material/Save';
-import CloseIcon from '@mui/icons-material/Close';
-import { backendApi } from "../../api/api"
+    TextField,
+    Typography,
+    styled
+} from '@mui/material';
+import propTypes from 'prop-types';
+import { useState } from 'react';
+import { backendApi } from "../../api/api";
 import { pipelineStore } from "../../appState/pipelineStore";
 // -------------------------------------------------------
 
@@ -54,13 +61,12 @@ const FileArea = [
 ]
 
 
-const MenuStyle = styled('div')({
-    display: 'flex',
-    flexDirection:'row',
-    flexWrap: 'wrap',
-    alignItems: 'center', 
-    justifyContent:'space-between',
-    marginLeft:20
+const MenuStyle = styled(Stack)({
+    maxHeight: 400,
+    overflow: 'auto',
+    padding: 16,
+    gap: 16,
+    flexGrow: 1
 });
 
 SourceConfig.propTypes = {
@@ -69,62 +75,104 @@ SourceConfig.propTypes = {
 
 }
 
-function SourceConfig({currNode, closeBar}) {
-    const [ sType, setStype ] = useState('')
-    
+function SourceConfig({ currNode, closeBar }) {
+    const [sType, setStype] = useState('')
+
 
     return (
-        <MenuStyle>
-            <div>
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography sx={{ mb: 5 }}>Source</Typography>
-                    <TextField
-                        select
-                        onChange={(event) => (setStype(event.target.value))}
-                        value={sType}
-                        helperText="Please select data source"
-                        required
-                        sx={{width:220}}
-                    >
-                        {sourceType.map((option) => (
-                            <MenuItem key={option.value} value={option.value}>
-                            {option.label}
-                            </MenuItem>
-                        ))}
-                    </TextField>
-                </Stack>
-                { sType === 'file' && <FileConfig closeBar={closeBar} currNode={currNode}></FileConfig>}
-                { sType === 'rdbms' && <RdbmsConfig closeBar={closeBar} currNode={currNode}></RdbmsConfig>}
-            </div>
-        </MenuStyle>
+        <Stack spacing={2}>
+            <Typography variant='caption'>Select the Type of Data Source</Typography>
+            <RadioGroup
+                row
+                required
+                name="source-type-radio-button"
+                onChange={e => {
+                    setStype(e.target.value);
+                }}
+            >
+                {sourceType.map(option => <FormControlLabel
+                    key={option.label}
+                    value={option.value}
+                    label={option.label}
+                    control={<Radio />}
+                />)}
+            </RadioGroup>
+            <Stack gap={2}>
+                {sType === 'file' && <FileConfig closeBar={closeBar} currNode={currNode}></FileConfig>}
+                {sType === 'rdbms' && <RdbmsConfig closeBar={closeBar} currNode={currNode}></RdbmsConfig>}
+            </Stack>
+        </Stack>
     )
 
 }
 
 export default SourceConfig
 
+
+//--------------------------------------------------------------
+const ActionButtons = ({ handleSubmit, closeBar }) => {
+    return <Stack direction={'row'} justifyContent={"space-between"}>
+        <Stack>
+        </Stack>
+        <Stack direction={'row'} gap={5}>
+            <Button variant="text" onClick={closeBar}>
+                Cancel
+            </Button>
+            <Button
+                variant="contained"
+                size='large'
+                color='primary'
+                onClick={handleSubmit}
+                disableElevation
+                startIcon={<Check />}
+            >
+                Save
+            </Button>
+        </Stack>
+    </Stack>
+}
+
+ActionButtons.propTypes = {
+    handleSubmit: propTypes.func,
+    closeBar: propTypes.func
+}
 //--------------------------------------------------------------
 
-const FileConfig = ({closeBar, currNode}) => {
+const FileConfig = ({ closeBar, currNode }) => {
     const [fileArea, setFileArea] = useState('')
     const [fileType, setFileType] = useState('')
     const [filePath, setFilePath] = useState('')
     const [bucketName, setBucketName] = useState('')
+    const [keyPath, setKeyPath] = useState('')
     const [showBucketField, setShowBucketField] = useState(false)
-    const [{pipeline},{setPipeline}] = pipelineStore()
+    const [{ pipeline }, { setPipeline }] = pipelineStore()
 
 
     async function handleSubmit() {
-
         let task_id = currNode.id
-        let payload = {
-            "config_type" : fileArea,
-            "config_properties" : {
-                "file_type": fileType,
-                "file_path": filePath
-            } 
+        var payload = {}
+        if (fileArea === 'gcp_bucket' || fileArea === 'aws_s3')
+        {
+            payload = {
+                "config_type": fileArea,
+                "config_properties": {
+                    "file_type": fileType,
+                    "bucket_name": bucketName,
+                    "key_file": keyPath,
+                    "file_path": filePath
+                }
+            }
         }
-        const response = await backendApi.put(`/api/v1/pipeline/${pipeline.uuid}/task/${task_id}`,payload)
+        else {
+            payload = {
+                "config_type": fileArea,
+                "config_properties": {
+                    "file_type": fileType,
+                    "file_path": filePath
+                }
+            }
+        }
+        const response = await backendApi.put(`/pipeline/${pipeline.uuid}/task/${task_id}`, payload)
 
         setPipeline(response.data.pipeline)
         closeBar()
@@ -132,90 +180,85 @@ const FileConfig = ({closeBar, currNode}) => {
 
     const areaChange = (event) => {
         setShowBucketField(false)
-        if (event.target.value === 'gcp_bucket' || event.target.value === 'aws_s3' ){
+        if (event.target.value === 'gcp_bucket' || event.target.value === 'aws_s3') {
             setShowBucketField(true)
         }
         setFileArea(event.target.value);
-      };
- 
+    };
+
     return (
-        <MenuStyle>
-            <div>
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography sx={{ mb: 5 }}>File Area</Typography>
-                    <TextField
-                        select
-                        onChange={areaChange}
+        <>
+            <MenuStyle>
+                <FormControl fullWidth variant='standard'>
+                    <InputLabel id="select-file-area">File Area</InputLabel>
+                    <Select
+                        label="File Area"
+                        variant='standard'
+                        labelId="select-file-area"
+                        helperText='Select the area where the file is placed'
                         value={fileArea}
-                        helperText="Please select file area"
                         required
-                        sx={{width:220}}
+                        onChange={areaChange}
                     >
-                        {FileArea.map((option) => (
-                            <MenuItem key={option.value} value={option.value}>
+                        {FileArea.map(option => <MenuItem value={option.value} key={option.key}>
                             {option.label}
-                            </MenuItem>
-                        ))}
-                    </TextField>
-                </Stack>
+                        </MenuItem>)}
+                    </Select>
+                </FormControl>
                 {showBucketField && (
-                    <Stack spacing={2} direction="row" sx={{marginBottom: 4, alignItems: 'center'}}>
-                        <Typography>Bucket Name</Typography>
+                    <>
                         <TextField
-                        type='text'
-                        variant='outlined'
-                        onChange={e => setBucketName(e.target.value)}
-                        value={bucketName}
-                        fullWidth
-                        helperText="Please enter bucket name"
+                            id="source-bucket-name"
+                            variant='standard'
+                            value={bucketName}
+                            label="Bucket Name"
+                            helperText="Enter the name of the bucket where the file is located"
+                            required
+                            onChange={e => setBucketName(e.target.value)}
                         />
-                    </Stack>
+                        <TextField
+                            id="source-key-path"
+                            variant='standard'
+                            value={keyPath}
+                            label="key path"
+                            helperText="Enter the path of the service key file"
+                            required
+                            onChange={e => setKeyPath(e.target.value)}
+                        />
+                    </>
                 )}
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography sx={{ mb: 5 }}>File Type</Typography>
-                    <TextField
-                        select
-                        onChange={e => setFileType(e.target.value)}
+                <FormControl fullWidth variant='standard' placeholder='Please select the type of the file'>
+                    <InputLabel id="select-file-type">File Type</InputLabel>
+                    <Select
+                        label="File Type"
+                        variant='standard'
+                        labelId="select-file-type"
+                        helperText="Please select the type of the file"
+                        placeholder='Please select the type of the file'
+                        aria-description='Please select the type of the file'
                         value={fileType}
-                        helperText="Please select file type"
                         required
-                        sx={{width:220}}
+                        onChange={e => setFileType(e.target.value)}
                     >
-                        {FileType.map((option) => (
-                            <MenuItem key={option.value} value={option.value}>
+                        {FileType.map(option => <MenuItem value={option.value} key={option.key}>
                             {option.label}
-                            </MenuItem>
-                        ))}
-                    </TextField>
-                </Stack>
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography>File Path</Typography>
-                    <TextField
-                    type='text'
-                    variant='outlined'
+                        </MenuItem>)}
+                    </Select>
+                </FormControl>
+                <TextField
+                    variant='standard'
+                    label='File Path'
                     onChange={e => setFilePath(e.target.value)}
                     value={filePath}
-                    helperText="Please enter file path"
+                    helperText="Enter the path of the file"
                     required
-                    sx={{width:220}}
-                    />
-                </Stack>
-
-
-                
-                <div id='button-menu' style={{display:'flex',flexDirection:'row', justifyContent:'space-around', paddingTop:'20px'}}>
-                    <Fab variant="extended" color="error" onClick={closeBar}>
-                        <CloseIcon sx={{ mr: 1 }} />
-                        Cancel
-                    </Fab>
-                    <Fab variant="extended" color="primary" onClick={handleSubmit}>
-                        <SaveIcon sx={{ mr: 1 }} />
-                        Save
-                    </Fab>
-                </div>
-            </div>
-     
-        </MenuStyle>
+                />
+            </MenuStyle>
+            <ActionButtons
+                closeBar={closeBar}
+                handleSubmit={handleSubmit}
+            />
+        </>
     )
 }
 
@@ -237,22 +280,22 @@ const RdbmsType = [
     }
 ]
 
-const RdbmsConfig = ({closeBar, currNode}) => {
+const RdbmsConfig = ({ closeBar, currNode }) => {
     const [dbType, setDbType] = useState('')
     const [host, setHost] = useState('')
     const [port, setPort] = useState('')
     const [user, setUser] = useState('')
-    const [password, setPassword] = useState(false)
+    const [password, setPassword] = useState('')
     const [database, setDatabase] = useState('')
     const [table, setTable] = useState('')
-    const [{pipeline}, {setPipeline}] = pipelineStore()
+    const [{ pipeline }, { setPipeline }] = pipelineStore()
 
     async function handleSubmit() {
 
         let task_id = currNode.id
         let payload = {
-            "config_type" : "rdbms",
-            "config_properties" : {
+            "config_type": "rdbms",
+            "config_properties": {
                 "db_type": dbType,
                 "host": host,
                 "port": port,
@@ -260,122 +303,106 @@ const RdbmsConfig = ({closeBar, currNode}) => {
                 "password": password,
                 "database": database,
                 "table": table
-            } 
+            }
         }
 
-        const response = await backendApi.put(`/api/v1/pipeline/${pipeline.uuid}/task/${task_id}`,payload)
+        const response = await backendApi.put(`/pipeline/${pipeline.uuid}/task/${task_id}`, payload)
 
         setPipeline(response.data.pipeline)
         closeBar()
     }
 
     return (
-        <MenuStyle>
-            <div>
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography sx={{ mb: 5 }}>DB Type</Typography>
-                    <TextField
-                        select
-                        onChange={e => setDbType(e.target.value)}
+        <>
+            <MenuStyle>
+                <FormControl fullWidth variant='standard' required>
+                    <InputLabel id="select-file-area">Database Type</InputLabel>
+                    <Select
+                        label="Database Type"
+                        variant='standard'
+                        labelId="select-file-area"
+                        placeholder='Please select Database Type'
+                        helperText="Please select Database Type"
                         value={dbType}
-                        helperText="Please select DB type"
                         required
-                        sx={{width:220}}
+                        onChange={e => setDbType(e.target.value)}
                     >
-                        {RdbmsType.map((option) => (
-                            <MenuItem key={option.value} value={option.value}>
+                        {RdbmsType.map(option => <MenuItem value={option.value} key={option.key}>
                             {option.label}
-                            </MenuItem>
-                        ))}
-                    </TextField>
-                </Stack>
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography>Host</Typography>
-                    <TextField
-                    type='text'
-                    variant='outlined'
-                    onChange={e => setHost(e.target.value)}
+                        </MenuItem>)}
+                    </Select>
+                </FormControl>
+                <TextField
+                    id="source-host-name"
+                    variant='standard'
+                    label="Host"
                     value={host}
-                    helperText="Please enter host name"
+                    helperText="Enter the host name or IP address of the database server"
                     required
-                    sx={{width:220}}
-                    />
-                </Stack>
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography>Port</Typography>
-                    <TextField
-                    type='text'
-                    variant='outlined'
+                    onChange={e => setHost(e.target.value)}
+                />
+                <TextField
+                    id="source-port-name"
+                    variant='standard'
+                    label="Port"
+                    type='number'
+                    placeholder='Please enter port number'
+                    helperText="Enter the port number for the database server"
                     onChange={e => setPort(e.target.value)}
                     value={port}
-                    helperText="Please enter port number"
                     required
-                    sx={{width:220}}
-                    />
-                </Stack>
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography>User</Typography>
-                    <TextField
-                    type='text'
-                    variant='outlined'
+                />
+                <TextField
+                    id="source-user-name"
+                    variant='standard'
+                    label="Username"
+                    placeholder='Please enter database username'
+                    helperText="Enter the username for the database"
                     onChange={e => setUser(e.target.value)}
-                    value={user}
-                    helperText="Please enter user"
                     required
-                    sx={{width:220}}
-                    />
-                </Stack>
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography>Password</Typography>
-                    <TextField
+                    value={user}
+                />
+                <TextField
+                    id="source-password-name"
+                    variant='standard'
+                    label="Password"
                     type='password'
-                    variant='outlined'
+                    placeholder='Please enter database password'
                     onChange={e => setPassword(e.target.value)}
                     value={password}
-                    helperText="Please enter password"
+                    helperText="Enter the password for the database"
                     required
-                    sx={{width:220}}
-                    />
-                </Stack>
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography>Database</Typography>
-                    <TextField
-                    type='text'
-                    variant='outlined'
+                />
+                <TextField
+                    id="source-database-name"
+                    variant='standard'
+                    label="Database"
+                    placeholder='Please enter database'
                     onChange={e => setDatabase(e.target.value)}
                     value={database}
-                    helperText="Please enter database"
+                    helperText="Enter the name of the database"
                     required
-                    sx={{width:220}}
-                    />
-                </Stack>
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography>Table</Typography>
-                    <TextField
-                    type='text'
-                    variant='outlined'
+                />
+                <TextField
+                    id="source-table-name"
+                    variant='standard'
+                    label="Table"
+                    placeholder='Please enter database'
                     onChange={e => setTable(e.target.value)}
                     value={table}
-                    helperText="Please enter table"
+                    helperText="Enter the name of the database table"
                     required
-                    sx={{width:220}}
-                    />
-                </Stack>
+                />
+            </MenuStyle>
 
-                <div id='button-menu' style={{display:'flex',flexDirection:'row', justifyContent:'space-around', paddingTop:'20px'}}>
-                    <Fab variant="extended" color="error" onClick={closeBar}>
-                        <CloseIcon sx={{ mr: 1 }} />
-                        Cancel
-                    </Fab>
-                    <Fab variant="extended" color="primary" onClick={handleSubmit}>
-                        <SaveIcon sx={{ mr: 1 }} />
-                        Save
-                    </Fab>
-                </div>
-            </div>
-        </MenuStyle>
+            <ActionButtons
+                closeBar={closeBar}
+                handleSubmit={handleSubmit}
+            />
+        </>
     )
 }
+
 
 RdbmsConfig.propTypes = {
     closeBar: propTypes.func,

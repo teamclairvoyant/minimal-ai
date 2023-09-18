@@ -18,9 +18,22 @@ function responsiveFontSizes({ sm, md, lg }) {
     };
 }
 
-const FONT_PRIMARY = 'Public Sans, sans-serif';
+const FONT_PRIMARY =  [
+    'Lato',
+    'Roboto',
+    '-apple-system',
+    'BlinkMacSystemFont',
+    '"Segoe UI"',
+    '"Helvetica Neue"',
+    'Arial',
+    'sans-serif',
+    '"Apple Color Emoji"',
+    '"Segoe UI Emoji"',
+    '"Segoe UI Symbol"',
+  ].join(",");
 
 const typography = {
+    color: 'rgb(50, 49, 48)',
     fontFamily: FONT_PRIMARY,
     fontWeightRegular: 400,
     fontWeightMedium: 600,

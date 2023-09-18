@@ -1,14 +1,14 @@
 import axios from "axios";
 
 const apiInstance = axios.create({
-  baseURL: "http://localhost:3000",
+  baseURL: "http://104.154.218.109",
   timeout: 1000,
   headers: { "X-Custom-Header": "foobar" },
 });
 
 const backendApi = axios.create({
-  baseURL: "http://localhost:4001",
-  timeout: 250000,
+  baseURL: "http://127.0.0.1:4001/api/v1",
+  timeout: 1000,
   headers: { "X-Custom-Header": "foobar" },
 });
 

@@ -1,21 +1,19 @@
-import { filter } from "lodash";
-import { useState, useEffect } from "react";
-import { backendApi } from "../api/api";
 import {
   Card,
-  Table,
-  Stack,
   Checkbox,
-  TableRow,
+  Container,
+  Stack,
+  Table,
   TableBody,
   TableCell,
-  Container,
-  Typography,
   TableContainer,
   TablePagination,
+  TableRow,
+  Typography,
 } from "@mui/material";
-
-
+import { filter } from "lodash";
+import { useEffect, useState } from "react";
+import { backendApi } from "../api/api";
 import SearchNotFound from "../components/SearchNotFound";
 import TaskListHead from "./TaskListHead";
 import TaskListToolbar from "./TaskListToolbar";
@@ -136,7 +134,7 @@ export default function TasksTable() {
 
   useEffect(() => {
     async function getPipelineList() {
-      const response = await backendApi.get("/api/v1/pipelines_summary");
+      const response = await backendApi.get("/pipelines_summary");
       setPipelinelist(response.data.pipelines);
     }
     getPipelineList();

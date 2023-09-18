@@ -1,8 +1,10 @@
-import CloseIcon from '@mui/icons-material/Close';
 import SaveIcon from '@mui/icons-material/Save';
 import {
-    Fab,
+    Button,
+    FormControl,
+    InputLabel,
     MenuItem,
+    Select,
     Stack,
     TextField,
     Typography,
@@ -15,13 +17,12 @@ import { pipelineStore } from "../../appState/pipelineStore";
 // -------------------------------------------------------
 
 
-const MenuStyle = styled('div')({
-    display: 'flex',
-    flexDirection:'row',
-    flexWrap: 'wrap',
-    alignItems: 'center', 
-    justifyContent:'space-between',
-    marginLeft:20
+const MenuStyle = styled(Stack)({
+    maxHeight: 400,
+    overflow: 'auto',
+    padding: 16,
+    gap: 16,
+    flexGrow: 1
 });
 
 const transformType = [
@@ -43,33 +44,60 @@ function TransformConfig({closeBar,currNode}) {
     const [ transType,setTransType ] = useState('')
 
   return (
-    <MenuStyle>
-            <div>
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography sx={{ mb: 5 }}>Type</Typography>
-                    <TextField
-                        select
-                        onChange={(event) => (setTransType(event.target.value))}
-                        value={transType}
-                        helperText="Please select data source"
-                        required
-                        sx={{width:220}}
-                    >
-                        {transformType.map((option) => (
-                            <MenuItem key={option.value} value={option.value}>
-                            {option.label}
-                            </MenuItem>
-                        ))}
-                    </TextField>
-                </Stack>
-                { transType === 'join' && <JoinConfig closeBar={closeBar} currNode={currNode}/>}
-                { transType === 'filter' && <FilterConfig closeBar={closeBar} currNode={currNode}/>}
-            </div>
-        </MenuStyle>
+
+    <Stack spacing={2}>
+        <Typography variant='caption'>Select the Type Transformation</Typography>
+        <TextField
+            select
+            onChange={(event) => (setTransType(event.target.value))}
+            value={transType}
+            helperText="Transformation Type"
+            required
+            sx={{width:220}}
+        >
+            {transformType.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                {option.label}
+                </MenuItem>
+            ))}
+        </TextField>
+        <Stack gap={2}>
+            { transType === 'join' && <JoinConfig closeBar={closeBar} currNode={currNode}/>}
+            { transType === 'filter' && <FilterConfig closeBar={closeBar} currNode={currNode}/>}
+        </Stack>
+    </Stack>
   )
 }
 
 export default TransformConfig
+
+//--------------------------------------------------------------
+const ActionButtons = ({ handleSubmit, closeBar }) => {
+    return <Stack direction={'row'} justifyContent={"space-between"}>
+        <Stack>
+        </Stack>
+        <Stack direction={'row'} gap={5}>
+            <Button variant="text" onClick={closeBar}>
+                Cancel
+            </Button>
+            <Button
+                variant="contained"
+                size='large'
+                color='primary'
+                onClick={handleSubmit}
+                disableElevation
+                startIcon={<SaveIcon />}
+            >
+                Save
+            </Button>
+        </Stack>
+    </Stack>
+}
+
+ActionButtons.propTypes = {
+    handleSubmit: propTypes.func,
+    closeBar: propTypes.func
+}
 
 //---------------------------------------------------------------
 
@@ -117,91 +145,73 @@ const JoinConfig = ({closeBar,currNode}) => {
                 "how": how
             } 
         }
-        const response = await backendApi.put(`/api/v1/pipeline/${pipeline.uuid}/task/${task_id}`,payload)
+        const response = await backendApi.put(`/pipeline/${pipeline.uuid}/task/${task_id}`,payload)
 
         setPipeline(response.data.pipeline)
         closeBar()
     }
+    
     return(
-        <MenuStyle>
-            <div>
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography sx={{ mb: 5 }}>Join Type</Typography>
-                    <TextField
-                        select
-                        onChange={e => setHow(e.target.value)}
+        <>
+            <MenuStyle>
+                <FormControl fullWidth variant='standard' placeholder='Please select the type of the file'>
+                    <InputLabel id="select-file-type">Join Type</InputLabel>
+                    <Select
+                        label="Join Type"
+                        variant='standard'
+                        labelId="select-join-type"
+                        helperText="Please select the type of the Join"
+                        placeholder='Please select the type of the Join'
+                        aria-description='Please select the type of the Join'
                         value={how}
-                        helperText="Please select Join type"
                         required
-                        sx={{width:220}}
+                        onChange={e => setHow(e.target.value)}
                     >
-                        {joinType.map((option) => (
-                            <MenuItem key={option.value} value={option.value}>
+                        {joinType.map(option => <MenuItem value={option.value} key={option.key}>
                             {option.label}
-                            </MenuItem>
-                        ))}
-                    </TextField>
-                </Stack>
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography>Left Table</Typography>
-                    <TextField
-                    type='text'
-                    variant='outlined'
+                        </MenuItem>)}
+                    </Select>
+                </FormControl>
+                <TextField
+                    variant='standard'
+                    label='Left Table'
                     onChange={e => setLeftTable(e.target.value)}
                     value={leftTable}
-                    helperText="Please enter file path"
+                    helperText="Enter the name of left table"
                     required
-                    sx={{width:220}}
-                    />
-                </Stack>
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography>Right Table</Typography>
-                    <TextField
-                    type='text'
-                    variant='outlined'
+                />
+                
+                <TextField
+                    variant='standard'
+                    label='Right Table'
                     onChange={e => setRightTable(e.target.value)}
                     value={rightTable}
-                    helperText="Please enter file path"
+                    helperText="Enter the name of right table"
                     required
-                    sx={{width:220}}
-                    />
-                </Stack>
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography>Left On</Typography>
-                    <TextField
-                    type='text'
-                    variant='outlined'
+                />
+                <TextField
+                    variant='standard'
+                    label='Left On Condition'
                     onChange={e => setLeftOn(e.target.value)}
                     value={leftOn}
-                    helperText="Please enter file path"
+                    helperText="Enter the join condition"
                     required
-                    sx={{width:220}}
-                    />
-                </Stack>
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography>Right on</Typography>
-                    <TextField
-                    type='text'
-                    variant='outlined'
+                />
+                <TextField
+                    variant='standard'
+                    label='Right On Condition'
                     onChange={e => setRightOn(e.target.value)}
                     value={rightOn}
-                    helperText="Please enter file path"
+                    helperText="Enter the join condition"
                     required
-                    sx={{width:220}}
-                    />
-                </Stack>
-                <div id='button-menu' style={{display:'flex',flexDirection:'row', justifyContent:'space-around', paddingTop:'20px'}}>
-                    <Fab variant="extended" color="error" onClick={closeBar}>
-                        <CloseIcon sx={{ mr: 1 }} />
-                        Cancel
-                    </Fab>
-                    <Fab variant="extended" color="primary" onClick={handleSubmit}>
-                        <SaveIcon sx={{ mr: 1 }} />
-                        Save
-                    </Fab>
-                </div>
-            </div>
-        </MenuStyle>
+                />
+
+            </MenuStyle>
+            <ActionButtons
+                    closeBar={closeBar}
+                    handleSubmit={handleSubmit}
+                />
+            </>
     )
 }
 
@@ -224,39 +234,30 @@ const FilterConfig = ({closeBar,currNode}) => {
                 "filter": filter
             } 
         }
-        const response = await backendApi.put(`/api/v1/pipeline/${pipeline.uuid}/task/${task_id}`,payload)
+        const response = await backendApi.put(`/pipeline/${pipeline.uuid}/task/${task_id}`,payload)
 
         setPipeline(response.data.pipeline)
         closeBar()
     }
 
     return(
-        <MenuStyle>
-            <div>
-                <Stack spacing={2} direction="row" sx={{marginBottom: 4,justifyContent:'space-around', alignItems: 'center'}}>
-                    <Typography>Filter Clause</Typography>
-                    <TextField
-                    type='text'
-                    variant='outlined'
+        <>
+            <MenuStyle>
+            <TextField
+                    variant='standard'
+                    label='Filter Clause'
                     onChange={e => setFilter(e.target.value)}
                     value={filter}
-                    helperText="Please enter file path"
+                    helperText="Enter the join condition"
                     required
-                    sx={{width:220}}
-                    />
-                </Stack>
-                <div id='button-menu' style={{display:'flex',flexDirection:'row', justifyContent:'space-around', paddingTop:'20px'}}>
-                    <Fab variant="extended" color="error" onClick={closeBar}>
-                        <CloseIcon sx={{ mr: 1 }} />
-                        Cancel
-                    </Fab>
-                    <Fab variant="extended" color="primary" onClick={handleSubmit}>
-                        <SaveIcon sx={{ mr: 1 }} />
-                        Save
-                    </Fab>
-                </div>
-            </div>
-        </MenuStyle>
+                />
+            </MenuStyle>
+            <ActionButtons
+                    closeBar={closeBar}
+                    handleSubmit={handleSubmit}
+                />
+
+        </>
     )
 }
 
