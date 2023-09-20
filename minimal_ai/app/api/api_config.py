@@ -3,9 +3,7 @@ import secrets
 from typing import Union
 
 from pydantic import Field, computed_field, validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-ENV_FILE_PATH = os.getenv("MINIMAL_AI_ENV_DIR")
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -13,18 +11,18 @@ class Settings(BaseSettings):
     """
     API_STR: str = Field(default="/api/v1")
     SECRET_KEY: str = Field(default=secrets.token_urlsafe(32))
-    REPO_PATH: str = Field(default=os.path.join(
+    MINIMAL_AI_REPO_PATH: str = Field(default=os.path.join(
         os.getcwd(), 'MINIMAL-AI-PROJECT'))
 
     @computed_field
     @property
     def PIPELINES_DIR(self) -> str:
-        return os.path.join(self.REPO_PATH, "pipelines")
+        return os.path.join(self.MINIMAL_AI_REPO_PATH, "pipelines")
 
     @computed_field
     @property
     def LOG_DIR(self) -> str:
-        return os.path.join(self.REPO_PATH, "logs")
+        return os.path.join(self.MINIMAL_AI_REPO_PATH, "logs")
 
     # BACKEND_CORS_ORIGINS is a JSON-formatted list of origins
     # e.g: '["http://localhost", "http://localhost:4200", "http://localhost:3000", \
@@ -54,8 +52,5 @@ class Settings(BaseSettings):
     THREAD_POOL_EXECUTOR: int = Field(default=20)
     PROCESS_POOL_EXECUTOR: int = Field(default=5)
 
-    model_config = SettingsConfigDict(
-        env_file=f"{os.getcwd()}.dev.env")
 
-
-settings = Settings(_env_file=f"{ENV_FILE_PATH}/.dev.env")
+settings = Settings()

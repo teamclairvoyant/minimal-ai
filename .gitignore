@@ -124,6 +124,7 @@ celerybeat.pid
 
 # Environments
 .env
+.minimalai.env
 .venv
 env/
 venv/
