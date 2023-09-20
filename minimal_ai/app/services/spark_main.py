@@ -1,7 +1,7 @@
 import json
 import logging
 from os import environ, listdir, path
-from typing import Any
+from typing import Any, Dict
 
 import __main__
 from pydantic.dataclasses import dataclass
@@ -17,6 +17,7 @@ class SparkMain:
     Class containing method to start the Spark Session.
     """
     app_name: str
+    config: Dict
 
     def start_spark(self, master='local[*]', jar_packages=[],
                     files=[], spark_config={}) -> Any:

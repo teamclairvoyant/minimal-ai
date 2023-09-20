@@ -48,7 +48,6 @@ class SparkSinkWriter:
             logger.info("Dataframe successfully loaded to - %s ",
                         self.current_task.sink_config["table"])
         except Exception as excep:
-            logger.error(str(excep))
             raise MinimalETLException(str(excep))
 
     async def local_file_writer(self) -> None:
@@ -65,24 +64,22 @@ class SparkSinkWriter:
                         self.current_task.sink_config["file_path"])
 
         except Exception as excep:
-            logger.error(str(excep))
             raise MinimalETLException(str(excep))
 
     async def gs_file_writer(self) -> None:
         """method to write the df to gs file system
         """
         try:
-            logger.info("writing dataframe to - %s in bucket - %s",
-                        self.current_task.sink_config["file_type"], self.current_task.sink_config["bucket_name"])
-            gs_file_path = GS_FILE_PATH.format(
-                bucket_name=self.current_task.sink_config['bucket_name'],
-                file_path=self.current_task.sink_config['file_path'])
+            logger.info("writing dataframe to - %s ",
+                        self.current_task.sink_config["file_type"])
+
             _df: DataFrame = await DataframeUtils.get_df_from_alias(self.spark, self.current_task.upstream_tasks[0])
 
             match self.current_task.sink_config["file_type"]:
                 case "csv":
                     _df.write.csv(
-                        path=gs_file_path, mode="overwrite", sep=",", header=True)
+                        path=self.current_task.sink_config["file_path"],
+                        mode=self.current_task.sink_config["mode"], sep=",", header=True)
 
                 case _:
                     logger.error("File type not supported - %s in sink writer",
@@ -94,7 +91,6 @@ class SparkSinkWriter:
                         self.current_task.sink_config["file_path"])
 
         except Exception as excep:
-            logger.error(str(excep))
             raise MinimalETLException(str(excep))
 
     async def bigquery_writer(self) -> None:
@@ -104,12 +100,11 @@ class SparkSinkWriter:
             logger.info("writing dataframe to bigqury")
             _df: DataFrame = await DataframeUtils.get_df_from_alias(self.spark, self.current_task.upstream_tasks[0])
 
-            _df.write.format("bigquery").option("writeMethod", "direct")\
-                .mode("overwrite").save(f"{self.current_task.sink_config['dataset']}.{self.current_task.sink_config['table']}")
+            _df.write.format("bigquery").option("writeMethod", "direct").mode(self.current_task.sink_config['mode'])\
+                .save(f"{self.current_task.sink_config['table']}")
 
-            logger.info("Dataframe successfully loaded to bigquery at - %s.%s ",
-                        self.current_task.sink_config["dataset"], self.current_task.sink_config["table"])
+            logger.info("Dataframe successfully loaded to bigquery at - %s ",
+                        self.current_task.sink_config["table"])
 
         except Exception as excep:
-            logger.error(str(excep))
             raise MinimalETLException(str(excep))

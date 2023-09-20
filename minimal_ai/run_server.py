@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Tuple
@@ -17,8 +16,6 @@ from minimal_ai.app.services.pipeline_scheduler import (get_scheduler_obj,
                                                         start_scheduler,
                                                         stop_scheduler)
 
-REPO_PATH_ENV_VAR = 'MINIMAL_REPO_PATH'
-
 setup_logging(settings.LOG_DIR)
 logger = logging.getLogger(__name__)
 services = {}
@@ -28,8 +25,6 @@ services = {}
 async def lifespan_event(app: FastAPI):
     """method to control the scheduler lifespan with that of app
     """
-    os.environ[REPO_PATH_ENV_VAR] = settings.PIPELINES_DIR
-    sys.path.append(os.path.dirname(settings.PIPELINES_DIR))
 
     logger.info("Initialising scheduler instance")
     services['scheduler'] = get_scheduler_obj()

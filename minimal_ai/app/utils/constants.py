@@ -155,22 +155,20 @@ class FileConfig(BaseModel):
     """ properties for file type configurations
     """
     file_type: str
-    bucket_name: str | None = None
-    key_file: str | None = None
     file_path: str
+    mode: str | None = None
 
 
 class GSFileConfig(BaseModel):
     """ properties for file type configurations
     """
-    bucket_name: str
-    key_file: str
     file_type: str
     file_path: str
+    mode: str | None = None
 
 
 class BigQueryConfig(BaseModel):
     """ properties for bigquery configurations
     """
-    dataset: str
     table: str
+    mode: str | None = None
