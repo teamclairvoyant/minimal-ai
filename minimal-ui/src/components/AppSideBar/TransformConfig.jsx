@@ -1,4 +1,4 @@
-import SaveIcon from '@mui/icons-material/Save';
+import Check from '@mui/icons-material/Check';
 import {
     Button,
     FormControl,
@@ -11,7 +11,7 @@ import {
     styled
 } from '@mui/material';
 import propTypes from 'prop-types';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { backendApi } from "../../api/api";
 import { pipelineStore } from "../../appState/pipelineStore";
 // -------------------------------------------------------
@@ -38,10 +38,25 @@ const transformType = [
 
 TransformConfig.propTypes = {
     closeBar: propTypes.func,
-    currNode: propTypes.any
+    currNode: propTypes.any,
+    pipelineData: propTypes.object
 }
-function TransformConfig({closeBar,currNode}) {
-    const [ transType,setTransType ] = useState('')
+function TransformConfig({closeBar, currNode, pipelineData}) {
+    const [ transType,setTransType ] = useState('');
+    const [ nodeData, setNodeData ] = useState(null);
+
+    useEffect(() => {
+        const { id } = currNode;
+        if (pipelineData["tasks"] && pipelineData["tasks"]) {
+            if (pipelineData["tasks"][id]) {
+                const nodeData = pipelineData["tasks"][id] || {}
+                setNodeData(nodeData);
+                if (nodeData["transformer_type"] == "join") {
+                    setTransType("join");
+                }
+            }
+        }
+    }, []);
 
   return (
 
@@ -62,8 +77,8 @@ function TransformConfig({closeBar,currNode}) {
             ))}
         </TextField>
         <Stack gap={2}>
-            { transType === 'join' && <JoinConfig closeBar={closeBar} currNode={currNode}/>}
-            { transType === 'filter' && <FilterConfig closeBar={closeBar} currNode={currNode}/>}
+            { transType === 'join' && <JoinConfig closeBar={closeBar} currNode={currNode} data={nodeData}/>}
+            { transType === 'filter' && <FilterConfig closeBar={closeBar} currNode={currNode} data={nodeData}/>}
         </Stack>
     </Stack>
   )
@@ -86,7 +101,7 @@ const ActionButtons = ({ handleSubmit, closeBar }) => {
                 color='primary'
                 onClick={handleSubmit}
                 disableElevation
-                startIcon={<SaveIcon />}
+                startIcon={<Check />}
             >
                 Save
             </Button>
@@ -124,12 +139,13 @@ const joinType = [
     }
 ]
 
-const JoinConfig = ({closeBar,currNode}) => {
-    const [how, setHow] = useState('')
-    const [leftTable, setLeftTable] = useState('')
-    const [rightTable, setRightTable] = useState('')
-    const [leftOn, setLeftOn] = useState('')
-    const [rightOn, setRightOn] = useState('')
+const JoinConfig = ({closeBar,currNode, data}) => {
+    const [how, setHow] = useState(data?.transformer_config?.how || '')
+    const [leftTable, setLeftTable] = useState(data?.transformer_config?.left_table || '')
+    const [rightTable, setRightTable] = useState(data?.transformer_config?.right_table || '')
+    const [leftOn, setLeftOn] = useState(data?.transformer_config?.left_on || '')
+    const [rightOn, setRightOn] = useState(data?.transformer_config?.right_on || '')
+    
     const [{pipeline},{setPipeline}] = pipelineStore()
 
     async function handleSubmit() {

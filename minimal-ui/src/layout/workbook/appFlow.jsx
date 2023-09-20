@@ -143,7 +143,7 @@ const MainFlow = ({ pipeline, setPipeline }) => {
     <>
       <SubBar onButtonClick={onAdd}></SubBar>
       <Drawer anchor='right' open={showAppBar} onClose={() => setShowAppBar(false)}>
-        <AppSidebar currNode={currNode} closeBar={() => setShowAppBar(false)}></AppSidebar>
+        <AppSidebar currNode={currNode} closeBar={() => setShowAppBar(false)} pipelineData={pipeline}></AppSidebar>
       </Drawer>
       <ReactFlow
         nodes={nodes}
