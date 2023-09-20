@@ -18,7 +18,7 @@ import { pipelineStore } from "../../appState/pipelineStore";
 
 
 const MenuStyle = styled(Stack)({
-    maxHeight: 400,
+    maxHeight: 350,
     overflow: 'auto',
     padding: 16,
     gap: 16,

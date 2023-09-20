@@ -62,7 +62,7 @@ const FileArea = [
 
 
 const MenuStyle = styled(Stack)({
-    maxHeight: 400,
+    maxHeight: 350,
     overflow: 'auto',
     padding: 16,
     gap: 16,
@@ -337,7 +337,7 @@ const RdbmsConfig = ({ closeBar, currNode }) => {
                     variant='standard'
                     label="Host"
                     value={host}
-                    helperText="Enter the host name or IP address of the database server"
+                    helperText="Enter the host name of the database server"
                     required
                     onChange={e => setHost(e.target.value)}
                 />

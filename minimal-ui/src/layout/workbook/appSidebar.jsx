@@ -13,7 +13,7 @@ AppSidebar.propTypes = {
 
 function AppSidebar({ currNode, closeBar }) {
     return (
-        <Box sx={{ minWidth: 550 }} role="presentation">
+        <Box sx={{ minWidth: 350 }} role="presentation">
             <AppBar position='static' sx={{ height: 64 }} style={{
                 justifyContent: "center",
                 padding: '0 16px'

@@ -142,58 +142,63 @@ const MainFlow = ({ pipeline, setPipeline }) => {
   return (
     <>
       <SubBar onButtonClick={onAdd}></SubBar>
-      <Drawer anchor='right' open={showAppBar} onClose={() => setShowAppBar(false)}>
+      {/* <Drawer anchor='right' open={showAppBar} onClose={() => setShowAppBar(false)}>
         <AppSidebar currNode={currNode} closeBar={() => setShowAppBar(false)}></AppSidebar>
-      </Drawer>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        defaultEdgeOptions={edgeOptions}
-        connectionLineStyle={connectionLineStyle}
-        onConnect={onConnect}
-        onInit={setRfInstance}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        onNodeClick={nodeClick}
-        fitView={true}
-        fitViewOptions={{
-          padding: 1,
-          maxZoom: 3
-        }}
-      >
-        <Panel position="top-right">
-          <Stack spacing={2} direction={'row'}>
-            <Button variant="outlined" size='small' onClick={onExecute}>Execute</Button>
-            <Button variant="outlined" size='small' onClick={onSave}>save</Button>
-            <Button variant="outlined" size='small' onClick={onRestore}>restore</Button>
-          </Stack>
-        </Panel>
-        <Controls />
-        <svg>
-          <defs>
-            <linearGradient id="edge-gradient">
-              <stop offset="0%" stopColor="#ae53ba" />
-              <stop offset="100%" stopColor="#2a8af6" />
-            </linearGradient>
+      </Drawer> */}
+      <div style={{height:"100%",display:"flex"}}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          defaultEdgeOptions={edgeOptions}
+          connectionLineStyle={connectionLineStyle}
+          onConnect={onConnect}
+          onInit={setRfInstance}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          onNodeClick={nodeClick}
+          fitView={true}
+          fitViewOptions={{
+            padding: 1,
+            maxZoom: 1
+          }}
+        >
+          <Panel position="top-right">
+            <Stack spacing={2} direction={'row'}>
+              <Button variant="outlined" size='small' onClick={onExecute}>Execute</Button>
+              <Button variant="outlined" size='small' onClick={onSave}>save</Button>
+              <Button variant="outlined" size='small' onClick={onRestore}>restore</Button>
+            </Stack>
+          </Panel>
+          <Controls />
+          <svg>
+            <defs>
+              <linearGradient id="edge-gradient">
+                <stop offset="0%" stopColor="#ae53ba" />
+                <stop offset="100%" stopColor="#2a8af6" />
+              </linearGradient>
 
-            <marker
-              id="edge-circle"
-              viewBox="-5 -5 10 10"
-              refX="0"
-              refY="0"
-              markerUnits="strokeWidth"
-              markerWidth="10"
-              markerHeight="10"
-              orient="auto"
-            >
-              <circle stroke="#2a8af6" strokeOpacity="0.75" r="2" cx="0" cy="0" />
-            </marker>
-          </defs>
-        </svg>
-        <Background variant="dots" gap={12} size={1} />
-      </ReactFlow>
+              <marker
+                id="edge-circle"
+                viewBox="-5 -5 10 10"
+                refX="0"
+                refY="0"
+                markerUnits="strokeWidth"
+                markerWidth="10"
+                markerHeight="10"
+                orient="auto"
+              >
+                <circle stroke="#2a8af6" strokeOpacity="0.75" r="2" cx="0" cy="0" />
+              </marker>
+            </defs>
+          </svg>
+          <Background variant="dots" gap={12} size={1} />
+        </ReactFlow>
+        <div style={{width:"30%"}}>
+          {setShowAppBar && <p>hello</p>}
+        </div>
+      </div>
     </>
   )
 }
