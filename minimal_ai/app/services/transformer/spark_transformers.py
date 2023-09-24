@@ -96,7 +96,6 @@ class SparkTransformer:
         """
         try:
             logger.info('Loading data variables from upstream tasks')
-
             left_df = await DataframeUtils.get_df_from_alias(self.spark,
                                                              self.current_task.transformer_config['left_table'])
 
@@ -104,10 +103,8 @@ class SparkTransformer:
                                                               self.current_task.transformer_config['right_table'])
 
             logger.info('Data loaded')
-            logger.info('modifying duplicate column names')
-            left_on = self.current_task.transformer_config['left_on']
-            right_on = self.current_task.transformer_config['right_on']
-
+            left_on = self.current_task.transformer_config['left_on'].copy()
+            right_on = self.current_task.transformer_config['right_on'].copy()
             for index in range(len(left_on)):
                 if left_on[index] == right_on[index]:
                     left_df = left_df.withColumnRenamed(
@@ -116,15 +113,12 @@ class SparkTransformer:
                     right_df = right_df.withColumnRenamed(
                         right_on[index],
                         f"{right_on[index]}_{self.current_task.transformer_config['right_table']}")
-                    left_on[
-                        index] = f"{left_on[index]}_{self.current_task.transformer_config['left_table']}"
-                    right_on[
-                        index] = f"{right_on[index]}_{self.current_task.transformer_config['right_table']}"
+                    left_on[index] = f"{left_on[index]}_{self.current_task.transformer_config['left_table']}"
+                    right_on[index] = f"{right_on[index]}_{self.current_task.transformer_config['right_table']}"
 
             on = [
                 col(f) == col(s)
-                for (f, s) in zip(self.current_task.transformer_config['left_on'],
-                                  self.current_task.transformer_config['right_on'])
+                for (f, s) in zip(left_on, right_on)
             ]
 
             _df = left_df.join(

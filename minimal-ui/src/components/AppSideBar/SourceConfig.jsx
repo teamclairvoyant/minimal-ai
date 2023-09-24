@@ -2,11 +2,8 @@ import { Check } from '@mui/icons-material';
 import {
     Button,
     FormControl,
-    FormControlLabel,
     InputLabel,
     MenuItem,
-    Radio,
-    RadioGroup,
     Select,
     Stack,
     TextField,
@@ -14,7 +11,7 @@ import {
     styled
 } from '@mui/material';
 import propTypes from 'prop-types';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { backendApi } from "../../api/api";
 import { pipelineStore } from "../../appState/pipelineStore";
 // -------------------------------------------------------
@@ -27,6 +24,10 @@ const sourceType = [
     {
         label: 'RDBMS',
         value: 'rdbms'
+    },
+    {
+        label: 'BIGQUERY',
+        value: 'bigquery'
     }
 ]
 
@@ -71,35 +72,65 @@ const MenuStyle = styled(Stack)({
 
 SourceConfig.propTypes = {
     closeBar: propTypes.func,
-    currNode: propTypes.any
+    currNode: propTypes.any,
+    pipelineData: propTypes.object
 
 }
 
-function SourceConfig({ currNode, closeBar }) {
+function SourceConfig({ currNode, closeBar, pipelineData }) {
     const [sType, setStype] = useState('')
+    const [nodeData, setNodeData] = useState({});
 
+    useEffect(() => {
+        console.log(currNode)
+        
+        const { id } = currNode;
+        console.log(pipelineData["tasks"][id])
+        if (pipelineData["tasks"] && pipelineData["tasks"]) {
+            if (pipelineData["tasks"][id]) {
+                const nodeData = pipelineData["tasks"][id] || {}
+                setNodeData(nodeData);
+                if (nodeData.hasOwnProperty("loader_type")) {
+                    if (/local_file|gcp_bucket|aws_s3/.test(nodeData["loader_type"]))
+                    setStype("file")
+                    else {
+                        setStype(nodeData["loader_type"] || "")
+                    }
+                }
+            }
+        }
+    }, [])
 
     return (
         <Stack spacing={2}>
             <Typography variant='caption'>Select the Type of Data Source</Typography>
-            <RadioGroup
-                row
+            <TextField
+                select
+                onChange={(event) => (setStype(event.target.value))}
+                value={sType}
+                helperText="Please select data source"
                 required
-                name="source-type-radio-button"
-                onChange={e => {
-                    setStype(e.target.value);
-                }}
+                sx={{width:220}}
             >
-                {sourceType.map(option => <FormControlLabel
-                    key={option.label}
-                    value={option.value}
-                    label={option.label}
-                    control={<Radio />}
-                />)}
-            </RadioGroup>
+                {sourceType.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                    </MenuItem>
+                ))}
+            </TextField>
             <Stack gap={2}>
-                {sType === 'file' && <FileConfig closeBar={closeBar} currNode={currNode}></FileConfig>}
-                {sType === 'rdbms' && <RdbmsConfig closeBar={closeBar} currNode={currNode}></RdbmsConfig>}
+                {
+                    sType === 'file' && 
+                    <FileConfig closeBar={closeBar} currNode={currNode} data={nodeData} pipelineUuid={pipelineData.uuid}/>
+                }
+                {
+                    sType === 'rdbms' && 
+                    <RdbmsConfig closeBar={closeBar} currNode={currNode} data={nodeData} pipelineUuid={pipelineData.uuid}/>
+                }
+                {
+                    sType === 'bigquery' && 
+                    <BigqueryConfig closeBar={closeBar} currNode={currNode} data={nodeData} pipelineUuid={pipelineData.uuid}/>
+                }
             </Stack>
         </Stack>
     )
@@ -138,53 +169,27 @@ ActionButtons.propTypes = {
 }
 //--------------------------------------------------------------
 
-const FileConfig = ({ closeBar, currNode }) => {
-    const [fileArea, setFileArea] = useState('')
-    const [fileType, setFileType] = useState('')
-    const [filePath, setFilePath] = useState('')
-    const [bucketName, setBucketName] = useState('')
-    const [keyPath, setKeyPath] = useState('')
-    const [showBucketField, setShowBucketField] = useState(false)
-    const [{ pipeline }, { setPipeline }] = pipelineStore()
+const FileConfig = ({ closeBar, currNode, data, pipelineUuid }) => {
 
+    const [fileArea, setFileArea] = useState(data?.loader_type || '')
+    const [fileType, setFileType] = useState(data?.loader_config?.file_type || '')
+    const [filePath, setFilePath] = useState(data?.loader_config?.file_path || '')
+    const [, { setPipeline }] = pipelineStore()
 
     async function handleSubmit() {
         let task_id = currNode.id
-        var payload = {}
-        if (fileArea === 'gcp_bucket' || fileArea === 'aws_s3')
-        {
-            payload = {
-                "config_type": fileArea,
-                "config_properties": {
-                    "file_type": fileType,
-                    "bucket_name": bucketName,
-                    "key_file": keyPath,
-                    "file_path": filePath
-                }
+        const payload = {
+            "config_type": fileArea,
+            "config_properties": {
+                "file_type": fileType,
+                "file_path": filePath
             }
         }
-        else {
-            payload = {
-                "config_type": fileArea,
-                "config_properties": {
-                    "file_type": fileType,
-                    "file_path": filePath
-                }
-            }
-        }
-        const response = await backendApi.put(`/pipeline/${pipeline.uuid}/task/${task_id}`, payload)
+        const response = await backendApi.put(`/pipeline/${pipelineUuid}/task/${task_id}`, payload)
 
         setPipeline(response.data.pipeline)
         closeBar()
     }
-
-    const areaChange = (event) => {
-        setShowBucketField(false)
-        if (event.target.value === 'gcp_bucket' || event.target.value === 'aws_s3') {
-            setShowBucketField(true)
-        }
-        setFileArea(event.target.value);
-    };
 
     return (
         <>
@@ -195,45 +200,21 @@ const FileConfig = ({ closeBar, currNode }) => {
                         label="File Area"
                         variant='standard'
                         labelId="select-file-area"
-                        helperText='Select the area where the file is placed'
                         value={fileArea}
                         required
-                        onChange={areaChange}
+                        onChange={e => setFileArea(e.target.value)}
                     >
                         {FileArea.map(option => <MenuItem value={option.value} key={option.key}>
                             {option.label}
                         </MenuItem>)}
                     </Select>
                 </FormControl>
-                {showBucketField && (
-                    <>
-                        <TextField
-                            id="source-bucket-name"
-                            variant='standard'
-                            value={bucketName}
-                            label="Bucket Name"
-                            helperText="Enter the name of the bucket where the file is located"
-                            required
-                            onChange={e => setBucketName(e.target.value)}
-                        />
-                        <TextField
-                            id="source-key-path"
-                            variant='standard'
-                            value={keyPath}
-                            label="key path"
-                            helperText="Enter the path of the service key file"
-                            required
-                            onChange={e => setKeyPath(e.target.value)}
-                        />
-                    </>
-                )}
                 <FormControl fullWidth variant='standard' placeholder='Please select the type of the file'>
                     <InputLabel id="select-file-type">File Type</InputLabel>
                     <Select
                         label="File Type"
                         variant='standard'
                         labelId="select-file-type"
-                        helperText="Please select the type of the file"
                         placeholder='Please select the type of the file'
                         aria-description='Please select the type of the file'
                         value={fileType}
@@ -264,7 +245,9 @@ const FileConfig = ({ closeBar, currNode }) => {
 
 FileConfig.propTypes = {
     closeBar: propTypes.func,
-    currNode: propTypes.any
+    currNode: propTypes.any,
+    data: propTypes.object,
+    pipelineUuid: propTypes.string
 }
 
 //---------------------------------------------------------------------
@@ -280,15 +263,16 @@ const RdbmsType = [
     }
 ]
 
-const RdbmsConfig = ({ closeBar, currNode }) => {
-    const [dbType, setDbType] = useState('')
-    const [host, setHost] = useState('')
-    const [port, setPort] = useState('')
-    const [user, setUser] = useState('')
-    const [password, setPassword] = useState('')
-    const [database, setDatabase] = useState('')
-    const [table, setTable] = useState('')
-    const [{ pipeline }, { setPipeline }] = pipelineStore()
+const RdbmsConfig = ({ closeBar, currNode, data, pipelineUuid }) => {
+
+    const [dbType, setDbType] = useState(data?.loader_config?.db_type || '')
+    const [host, setHost] = useState(data?.loader_config?.host || '')
+    const [port, setPort] = useState(data?.loader_config?.port || '')
+    const [user, setUser] = useState(data?.loader_config?.user || '')
+    const [password, setPassword] = useState(data?.loader_config?.password || '')
+    const [database, setDatabase] = useState(data?.loader_config?.database || '')
+    const [table, setTable] = useState(data?.loader_config?.table || '')
+    const [, { setPipeline }] = pipelineStore()
 
     async function handleSubmit() {
 
@@ -306,7 +290,7 @@ const RdbmsConfig = ({ closeBar, currNode }) => {
             }
         }
 
-        const response = await backendApi.put(`/pipeline/${pipeline.uuid}/task/${task_id}`, payload)
+        const response = await backendApi.put(`/pipeline/${pipelineUuid}/task/${task_id}`, payload)
 
         setPipeline(response.data.pipeline)
         closeBar()
@@ -322,7 +306,6 @@ const RdbmsConfig = ({ closeBar, currNode }) => {
                         variant='standard'
                         labelId="select-file-area"
                         placeholder='Please select Database Type'
-                        helperText="Please select Database Type"
                         value={dbType}
                         required
                         onChange={e => setDbType(e.target.value)}
@@ -406,5 +389,60 @@ const RdbmsConfig = ({ closeBar, currNode }) => {
 
 RdbmsConfig.propTypes = {
     closeBar: propTypes.func,
-    currNode: propTypes.any
+    currNode: propTypes.any,
+    data: propTypes.object,
+    pipelineUuid: propTypes.string
+}
+
+//----------------------------------------------------------------
+
+const BigqueryConfig = ({ closeBar, currNode, data, pipelineUuid }) => {
+
+    const [table, setTable] = useState(data?.loader_config?.table || '')
+    const [, { setPipeline }] = pipelineStore()
+
+    async function handleSubmit() {
+
+        let task_id = currNode.id
+        let payload = {
+            "config_type": "bigquery",
+            "config_properties": {
+                "table": table
+            }
+        }
+
+        const response = await backendApi.put(`/pipeline/${pipelineUuid}/task/${task_id}`, payload)
+
+        setPipeline(response.data.pipeline)
+        closeBar()
+    }
+
+    return (
+        <>
+            <MenuStyle>
+            <TextField
+                    id="source-table-name"
+                    variant='standard'
+                    label="Table"
+                    placeholder='Please enter database'
+                    onChange={e => setTable(e.target.value)}
+                    value={table}
+                    helperText="Table format - project-id:dataset:table"
+                    required
+                />
+            </MenuStyle>
+            <ActionButtons
+                closeBar={closeBar}
+                handleSubmit={handleSubmit}
+            />
+        </>
+    )
+
+}
+
+BigqueryConfig.propTypes = {
+    closeBar: propTypes.func,
+    currNode: propTypes.any,
+    data: propTypes.object,
+    pipelineUuid: propTypes.string
 }

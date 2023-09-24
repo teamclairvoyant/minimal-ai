@@ -1,5 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { backendApi } from "../../api/api";
 import { pipelineStore } from "../../appState/pipelineStore";
@@ -30,7 +30,8 @@ const MainStyle = styled('div')(({ theme }) => ({
 
 export default function WorkBook() {
 
-  const [pipeline, { setPipeline }] = pipelineStore()
+  const [, { setPipeline }] = pipelineStore()
+  const [pipelineFlow, setPipelineFlow] = useState({})
   let locState = useLocation()
 
   useEffect(() => {
@@ -42,6 +43,7 @@ export default function WorkBook() {
 
       if (response.data) {
         setPipeline(response.data.pipeline)
+        setPipelineFlow(response.data.pipeline)
       }
     }
 
@@ -53,9 +55,9 @@ export default function WorkBook() {
   
   return (
     <RootStyle>
-      <Navbar title={pipeline.pipeline.name}/>
+      <Navbar/>
       <MainStyle >
-        <AppFlow />
+        <AppFlow pipelineData={pipelineFlow}/>
       </MainStyle>
     </RootStyle>
   )

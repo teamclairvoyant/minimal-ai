@@ -1,8 +1,8 @@
+import { AppBar, Stack, Toolbar } from "@mui/material";
 import { alpha, styled } from "@mui/material/styles";
-import { Box, Stack, AppBar, Toolbar, Typography } from "@mui/material";
 import AccountPopover from "../../components/AccountPopover";
-import NotificationsPopover from "../../components/NotificationsPopover";
 import Logo from "../../components/Logo";
+import NotificationsPopover from "../../components/NotificationsPopover";
 
 const DRAWER_WIDTH = 0;
 const APPBAR_MOBILE = 32;
@@ -21,6 +21,8 @@ const RootStyle = styled(AppBar)(({ theme }) => ({
 
 const ToolbarStyle = styled(Toolbar)(({ theme }) => ({
   minHeight: APPBAR_MOBILE,
+  display: "flex",
+  justifyContent: "space-between",
   [theme.breakpoints.up('lg')]: {
     minHeight: APPBAR_DESKTOP,
     padding: theme.spacing(0, 5)
@@ -28,26 +30,11 @@ const ToolbarStyle = styled(Toolbar)(({ theme }) => ({
 }));
 
 
-export default function Navbar({ title }) {
+export default function Navbar() {
   return (
     <RootStyle>
       <ToolbarStyle>
         <Logo />
-        <Box sx={{ flexGrow: 1 }}>
-          {title && <Stack 
-            paddingLeft={2} 
-            marginLeft={2}
-            sx={{
-              borderLeft: 1,
-              color: "rgb(243, 242, 241)"
-            }}
-            >
-            <Typography variant="h6" color={"black"}>
-              {title}
-            </Typography>
-          </Stack>
-          }
-        </Box>
         <Stack
           direction="row"
           alignItems="center"

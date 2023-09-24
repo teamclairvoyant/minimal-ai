@@ -29,6 +29,10 @@ greenlet = "^2.0.2"
 aiofiles = "^23.2.1"
 langchain = "^0.0.283"
 
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.2"
+httpx = "^0.25.0"
+
 
 [[tool.poetry.source]]
 name = "pypiorg"

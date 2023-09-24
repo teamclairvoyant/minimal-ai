@@ -11,7 +11,7 @@ import {
     styled
 } from '@mui/material';
 import propTypes from 'prop-types';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { backendApi } from "../../api/api";
 import { pipelineStore } from "../../appState/pipelineStore";
 // -------------------------------------------------------
@@ -38,10 +38,26 @@ const transformType = [
 
 TransformConfig.propTypes = {
     closeBar: propTypes.func,
-    currNode: propTypes.any
+    currNode: propTypes.any,
+    pipelineData: propTypes.object
 }
-function TransformConfig({closeBar,currNode}) {
+
+
+function TransformConfig({closeBar,currNode, pipelineData}) {
     const [ transType,setTransType ] = useState('')
+    const [nodeData, setNodeData] = useState({});
+
+    useEffect(() => {
+        const { id } = currNode;
+        if (pipelineData["tasks"] && pipelineData["tasks"]) {
+            if (pipelineData["tasks"][id]) {
+                const nodeData = pipelineData["tasks"][id] || {}
+                setNodeData(nodeData);
+                if (nodeData.hasOwnProperty("transformer_type"))
+                    setTransType(nodeData["transformer_type"] || "")
+            }
+        }
+    }, [])
 
   return (
 
@@ -62,8 +78,14 @@ function TransformConfig({closeBar,currNode}) {
             ))}
         </TextField>
         <Stack gap={2}>
-            { transType === 'join' && <JoinConfig closeBar={closeBar} currNode={currNode}/>}
-            { transType === 'filter' && <FilterConfig closeBar={closeBar} currNode={currNode}/>}
+            { 
+                transType === 'join' && 
+                <JoinConfig closeBar={closeBar} currNode={currNode} data={nodeData} pipelineUuid={pipelineData.uuid}/>
+            }
+            { 
+                transType === 'filter' && 
+                <FilterConfig closeBar={closeBar} currNode={currNode} data={nodeData} pipelineUuid={pipelineData.uuid}/>
+            }
         </Stack>
     </Stack>
   )
@@ -124,13 +146,13 @@ const joinType = [
     }
 ]
 
-const JoinConfig = ({closeBar,currNode}) => {
-    const [how, setHow] = useState('')
-    const [leftTable, setLeftTable] = useState('')
-    const [rightTable, setRightTable] = useState('')
-    const [leftOn, setLeftOn] = useState('')
-    const [rightOn, setRightOn] = useState('')
-    const [{pipeline},{setPipeline}] = pipelineStore()
+const JoinConfig = ({closeBar,currNode,data, pipelineUuid}) => {
+    const [how, setHow] = useState(data?.transformer_config?.how || '')
+    const [leftTable, setLeftTable] = useState(data?.transformer_config?.left_table || '')
+    const [rightTable, setRightTable] = useState(data?.transformer_config?.right_table || '')
+    const [leftOn, setLeftOn] = useState(data?.transformer_config?.left_on || '')
+    const [rightOn, setRightOn] = useState(data?.transformer_config?.right_on || '')
+    const [,{setPipeline}] = pipelineStore()
 
     async function handleSubmit() {
 
@@ -145,7 +167,7 @@ const JoinConfig = ({closeBar,currNode}) => {
                 "how": how
             } 
         }
-        const response = await backendApi.put(`/pipeline/${pipeline.uuid}/task/${task_id}`,payload)
+        const response = await backendApi.put(`/pipeline/${pipelineUuid}/task/${task_id}`,payload)
 
         setPipeline(response.data.pipeline)
         closeBar()
@@ -217,14 +239,16 @@ const JoinConfig = ({closeBar,currNode}) => {
 
 JoinConfig.propTypes = {
     closeBar : propTypes.func,
-    currNode: propTypes.any
+    currNode: propTypes.any,
+    data: propTypes.object,
+    pipelineUuid: propTypes.string
 }
 
 //---------------------------------------------------------------
 
-const FilterConfig = ({closeBar,currNode}) => {
-    const [filter,setFilter] = useState('')
-    const [{pipeline},{setPipeline}] = pipelineStore()
+const FilterConfig = ({closeBar,currNode,data,pipelineUuid}) => {
+    const [filter,setFilter] = useState(data?.transformer_config?.filter || '')
+    const [,{setPipeline}] = pipelineStore()
     async function handleSubmit() {
 
         let task_id = currNode.id
@@ -234,7 +258,7 @@ const FilterConfig = ({closeBar,currNode}) => {
                 "filter": filter
             } 
         }
-        const response = await backendApi.put(`/pipeline/${pipeline.uuid}/task/${task_id}`,payload)
+        const response = await backendApi.put(`/pipeline/${pipelineUuid}/task/${task_id}`,payload)
 
         setPipeline(response.data.pipeline)
         closeBar()
@@ -263,5 +287,7 @@ const FilterConfig = ({closeBar,currNode}) => {
 
 FilterConfig.propTypes = {
     closeBar : propTypes.func,
-    currNode: propTypes.any
+    currNode: propTypes.any,
+    data: propTypes.object,
+    pipelineUuid: propTypes.string
 }

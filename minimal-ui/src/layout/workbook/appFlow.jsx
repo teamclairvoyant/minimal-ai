@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { Button, Drawer, Stack } from '@mui/material';
+import { Button, Container, Drawer, Stack } from '@mui/material';
 import propTypes from "prop-types";
 import { useEffect, useState } from 'react';
 import ReactFlow, {
@@ -17,12 +17,12 @@ import 'reactflow/dist/style.css';
 import { backendApi } from "../../api/api";
 import { pipelineStore } from "../../appState/pipelineStore";
 import "../../assets/css/index.css";
+import PipelineDetails from '../../components/PipelineDetails';
 import { formatNodeName } from '../../utils/formatString';
 import SubBar from "../subBar";
 import CustomEdge from './CustomEdge';
 import CustomNode from './CustomNode';
 import AppSidebar from './appSidebar';
-
 
 const nodeTypes = {
   node: CustomNode,
@@ -32,7 +32,7 @@ const edgeTypes = {
   turbo: CustomEdge,
 };
 
-const MainFlow = ({ pipeline, setPipeline }) => {
+const MainFlow = ({ pipeline, setPipeline, pipelineData }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [rfInstance, setRfInstance] = useState(null);
@@ -41,21 +41,20 @@ const MainFlow = ({ pipeline, setPipeline }) => {
   const [showAppBar, setShowAppBar] = useState(false)
 
   useEffect(() => {
-    if (pipeline.reactflow_props) {
+    if (pipelineData.reactflow_props) {
+      const flow = pipelineData.reactflow_props
       const restoreFlow = async () => {
-        const flow = pipeline.reactflow_props;
-
         if (Object.keys(flow).length != 0) {
           const { x = 0, y = 0, zoom = 1 } = flow.viewport;
           setNodes(flow.nodes || []);
           setEdges(flow.edges || []);
           setViewport({ x, y, zoom });
         }
-      };
+      }
+      restoreFlow()
 
-      restoreFlow();
     }
-  }, [pipeline])
+  }, [pipelineData])
 
   const onConnect = async (params) => {
     if (params) {
@@ -118,8 +117,7 @@ const MainFlow = ({ pipeline, setPipeline }) => {
   const onAdd = async (type, name) => {
     const response = await backendApi.post(`/pipeline/${pipeline.uuid}/task`, {
       "name": name,
-      "task_type": type === 'input' ? 'data_loader' : type === 'output' ? 'data_sink' : 'data_transformer',
-      "upstream_task_uuids": null
+      "task_type": type === 'input' ? 'data_loader' : type === 'output' ? 'data_sink' : 'data_transformer'
     });
 
     setPipeline(response.data.pipeline)
@@ -134,18 +132,17 @@ const MainFlow = ({ pipeline, setPipeline }) => {
       },
     }
 
-    setNodes((nds) =>
-      nds.concat(newNode))
+    setNodes((nds) => nds.concat(newNode))
   }
 
 
   return (
     <>
       <SubBar onButtonClick={onAdd}></SubBar>
-      {/* <Drawer anchor='right' open={showAppBar} onClose={() => setShowAppBar(false)}>
-        <AppSidebar currNode={currNode} closeBar={() => setShowAppBar(false)}></AppSidebar>
-      </Drawer> */}
-      <div style={{height:"100%",display:"flex"}}>
+      <Drawer anchor='right' open={showAppBar} onClose={() => setShowAppBar(false)}>
+        <AppSidebar currNode={currNode} closeBar={() => setShowAppBar(false)} pipelineData={pipeline}></AppSidebar>
+      </Drawer>
+      <div style={{height:"95%",display:"flex"}}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -195,9 +192,10 @@ const MainFlow = ({ pipeline, setPipeline }) => {
           </svg>
           <Background variant="dots" gap={12} size={1} />
         </ReactFlow>
-        <div style={{width:"30%"}}>
-          {setShowAppBar && <p>hello</p>}
-        </div>
+        
+        <Container maxWidth="xs">
+          <PipelineDetails/>
+        </Container>
       </div>
     </>
   )
@@ -205,16 +203,21 @@ const MainFlow = ({ pipeline, setPipeline }) => {
 
 MainFlow.propTypes = {
   pipeline: propTypes.any,
-  setPipeline: propTypes.func
+  setPipeline: propTypes.func,
+  pipelineData: propTypes.object
 }
 
 
-export default function AppFlow() {
+export default function AppFlow({pipelineData}) {
   const [{ pipeline }, { setPipeline }] = pipelineStore()
 
   return (
     <ReactFlowProvider>
-      <MainFlow pipeline={pipeline} setPipeline={setPipeline} />
+      <MainFlow pipeline={pipeline} setPipeline={setPipeline} pipelineData={pipelineData}/>
     </ReactFlowProvider>
   )
+}
+
+AppFlow.propTypes = {
+  pipelineData: propTypes.object
 }

@@ -1,6 +1,6 @@
+import { Button, Dialog, DialogActions, DialogContent, Stack, TextField } from '@mui/material';
+import propTypes from "prop-types";
 import { useState } from 'react';
-import { Button, Dialog, DialogContent, TextField, DialogActions, Stack } from '@mui/material';
-import propTypes from "prop-types"
 import Iconify from './Iconify';
 
 
@@ -38,60 +38,13 @@ function ShowTaskModal(openModal, setOpenModal, type, addNode) {
 }
 
 
-// function SourceMenu(menuName,addNode,setAnchorEl){
-//     const [open, setOpen] = useState(false)
-//     const [taskType, setTaskType] = useState('')
-
-//     function openTaskModal(sType){
-//         setOpen(true)
-//         setTaskType(sType)
-//     }
-
-//     if (menuName == "Source"){
-//         return (
-//             <div>
-//                 <div>
-//                     <MenuItem onClick={() => openTaskModal("file")}>File</MenuItem>
-//                     <MenuItem onClick={() => openTaskModal("rdbms")}>Rdbms</MenuItem>
-//                 </div>
-//                 {ShowTaskModal(open, setOpen,'input',taskType,addNode,setAnchorEl)}
-//             </div>
-//         )
-//     }
-//     else if (menuName == "Transform") {
-//         return (
-//             <div>
-//                 <div>
-//                     <MenuItem onClick={() => openTaskModal("join")}>Join</MenuItem>
-//                     <MenuItem onClick={() => openTaskModal("transform")}>Filter</MenuItem>
-//                     <MenuItem onClick={() => openTaskModal("transform")}>Group By</MenuItem>
-//                     <MenuItem onClick={() => openTaskModal("transform")}>Rename Column</MenuItem>
-//                 </div>
-//                 {ShowTaskModal(open, setOpen,'default',taskType,addNode,setAnchorEl)}
-//             </div>
-//         )
-//     }
-//     else {
-//         return (
-//             <div>
-//                 <div>
-//                     <MenuItem onClick={() => openTaskModal("file")}>File</MenuItem>
-//                     <MenuItem onClick={() => openTaskModal("rdbms")}>Data Warehouse</MenuItem>
-//                 </div>
-//                 {ShowTaskModal(open, setOpen,'output',taskType,addNode,setAnchorEl)}
-//             </div>
-//         )
-//     }
-// }
-
-
 export default function AppMenu({ menuName, type, iconName, buttonColor, addNode }) {
 
     const [open, setOpen] = useState(false)
 
     return (
         <Stack>
-            <Button variant="contained" color='secondary' onClick={() => setOpen(true)}
+            <Button variant="text" color='info' onClick={() => setOpen(true)}
                 startIcon={<Iconify icon={iconName} />}
             >
                 {menuName}
