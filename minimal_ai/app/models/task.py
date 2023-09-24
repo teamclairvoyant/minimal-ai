@@ -258,6 +258,13 @@ class DataLoaderTask(Task):
                     self.loader_type = loader
                     self.loader_config = _config.model_dump()
 
+                case "bigquery":
+                    _config = BigQueryConfig.model_validate(loader_config)
+                    logger.info('Configuring %s sink for task - %s',
+                                loader_type, self.uuid)
+                    self.loader_type = loader
+                    self.loader_config = _config.model_dump()
+
                 case _:
                     logger.error('Loader type - %s not supported', loader_type)
                     raise MinimalETLException(
@@ -293,6 +300,9 @@ class DataLoaderTask(Task):
 
             case "gcp_bucket":
                 SparkSourceReaders(self, spark).gs_file_reader()
+
+            case "bigquery":
+                SparkSourceReaders(self, spark).bigquery_reader()
 
             case _:
                 self.status = TaskStatus.FAILED

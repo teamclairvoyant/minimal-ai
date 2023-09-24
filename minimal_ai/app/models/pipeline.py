@@ -47,7 +47,7 @@ class Pipeline:
         """
         path to config file for the pipeline
         """
-        return os.path.join(settings.REPO_PATH, settings.PIPELINES_DIR, self.uuid)
+        return os.path.join(settings.MINIMAL_AI_REPO_PATH, settings.PIPELINES_DIR, self.uuid)
 
     @property
     def variable_dir(self):
@@ -122,7 +122,7 @@ class Pipeline:
         logger.info("creating pipeline %s", name)
         uuid = clean_name(name)
         pipeline_path = os.path.join(
-            settings.REPO_PATH, settings.PIPELINES_DIR, uuid)
+            settings.MINIMAL_AI_REPO_PATH, settings.PIPELINES_DIR, uuid)
         variable_path = os.path.join(pipeline_path, VARIABLE_DIR)
 
         if os.path.exists(pipeline_path):
@@ -158,7 +158,7 @@ class Pipeline:
         """
 
         config_path = os.path.join(
-            settings.REPO_PATH,
+            settings.MINIMAL_AI_REPO_PATH,
             settings.PIPELINES_DIR,
             uuid,
             METADATA_FILE,
@@ -190,7 +190,7 @@ class Pipeline:
         """
 
         config_path = os.path.join(
-            settings.REPO_PATH,
+            settings.MINIMAL_AI_REPO_PATH,
             settings.PIPELINES_DIR,
             uuid,
             METADATA_FILE,
@@ -314,7 +314,8 @@ class Pipeline:
                     self.tasks[task_conf['uuid']] = exec_data['task']
 
                 return asyncio.create_task(build_and_execute())
-            spark, spark_config = SparkMain(self.uuid).start_spark()
+            spark, spark_config = SparkMain(
+                self.uuid, self.executor_config).start_spark()
             task_queue = Queue()
             executed_tasks = {}
             for _task in root_tasks:
