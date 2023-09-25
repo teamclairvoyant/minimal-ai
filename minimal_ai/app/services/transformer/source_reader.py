@@ -172,3 +172,34 @@ class SparkSourceReaders:
         except Exception as excep:
             raise MinimalETLException(
                 f"Failed to load from {self.current_task.loader_config['file_path']} | {excep.args}")
+
+    def json_file_reader(self) -> None:
+        """ registers dataframe from JSON source
+        """
+
+        try:
+            logger.info("Loading data from JSON file - %s",
+                        self.current_task.loader_config['file_path'])
+            
+            if not os.path.exists(self.current_task.loader_config['file_path']):
+                logger.error('JSON file path - %s does not exist',
+                             self.current_task.loader_config['file_path'])
+                raise MinimalETLException(
+                    f'JSON file path - {self.current_task.loader_config["file_path"]} does not exist')
+            
+            _df = self.spark.read.json(self.current_task.loader_config['file_path'])
+
+            _df.createOrReplaceTempView(self.current_task.uuid)
+            logger.info("Successfully created dataframe from JSON - %s",
+                        self.current_task.loader_config['file_path'])
+            
+            asyncio.create_task(self.current_task.pipeline.variable_manager.add_variable(
+                self.current_task.pipeline.uuid,
+                self.current_task.uuid,
+                self.current_task.uuid,
+                _df.toJSON().take(200)
+            ))
+
+        except Exception as excep:
+            raise MinimalETLException(
+                f"Failed to read from {self.current_task.loader_config['file_path']} | {excep.args}")
