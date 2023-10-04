@@ -1,4 +1,4 @@
-import SaveIcon from '@mui/icons-material/Save';
+import Check from '@mui/icons-material/Check';
 import {
     Button,
     FormControl,
@@ -120,7 +120,7 @@ const ActionButtons = ({ handleSubmit, closeBar }) => {
                 color='primary'
                 onClick={handleSubmit}
                 disableElevation
-                startIcon={<SaveIcon />}
+                startIcon={<Check />}
             >
                 Save
             </Button>

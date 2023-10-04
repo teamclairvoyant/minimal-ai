@@ -8,10 +8,11 @@ import Close from '@mui/icons-material/Close';
 
 AppSidebar.propTypes = {
     currNode: propTypes.object,
-    closeBar: propTypes.func
+    closeBar: propTypes.func,
+    pipelineData: propTypes.object
 }
 
-function AppSidebar({ currNode, closeBar }) {
+function AppSidebar({ currNode, closeBar, pipelineData }) {
     return (
         <Box sx={{ minWidth: 550 }} role="presentation">
             <AppBar position='static' sx={{ height: 64 }} style={{
@@ -30,9 +31,9 @@ function AppSidebar({ currNode, closeBar }) {
                 </Stack>
             </AppBar>
             <Box padding={2} sx={{ overflowY: 'auto', maxHeight: 'calc(100vh - 64px)', padding: 2, overflow: 'hidden' }}>
-                {currNode.data.type === 'input' && <SourceConfig closeBar={closeBar} currNode={currNode} />}
-                {currNode.data.type === 'default' && <TransformConfig closeBar={closeBar} currNode={currNode} />}
-                {currNode.data.type === 'output' && <SinkConfig closeBar={closeBar} currNode={currNode} />}
+                {currNode.data.type === 'input' && <SourceConfig closeBar={closeBar} currNode={currNode} pipelineData={pipelineData} />}
+                {currNode.data.type === 'default' && <TransformConfig closeBar={closeBar} currNode={currNode} pipelineData={pipelineData} />}
+                {currNode.data.type === 'output' && <SinkConfig closeBar={closeBar} currNode={currNode} pipelineData={pipelineData} />}
             </Box>
         </Box>
     )

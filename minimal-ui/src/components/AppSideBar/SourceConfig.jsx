@@ -13,8 +13,8 @@ import {
     Typography,
     styled
 } from '@mui/material';
-import propTypes from 'prop-types';
-import { useState } from 'react';
+import propTypes from 'prop-types'; 
+import { useEffect, useState } from 'react';
 import { backendApi } from "../../api/api";
 import { pipelineStore } from "../../appState/pipelineStore";
 // -------------------------------------------------------
@@ -71,13 +71,26 @@ const MenuStyle = styled(Stack)({
 
 SourceConfig.propTypes = {
     closeBar: propTypes.func,
-    currNode: propTypes.any
-
+    currNode: propTypes.any,
+    pipelineData: propTypes.object
 }
 
-function SourceConfig({ currNode, closeBar }) {
-    const [sType, setStype] = useState('')
+function SourceConfig({ currNode, closeBar, pipelineData }) {
+    const [sType, setStype] = useState('');
+    const [nodeData, setNodeData] = useState({});
 
+    useEffect(() => {
+        const { id } = currNode;
+        if (pipelineData["tasks"] && pipelineData["tasks"]) {
+            if (pipelineData["tasks"][id]) {
+                const nodeData = pipelineData["tasks"][id] || {}
+                setNodeData(nodeData);
+                if (nodeData.hasOwnProperty("loader_type")) {
+                    setStype("file");
+                }
+            }
+        }
+    }, []);
 
     return (
         <Stack spacing={2}>
@@ -89,6 +102,7 @@ function SourceConfig({ currNode, closeBar }) {
                 onChange={e => {
                     setStype(e.target.value);
                 }}
+                value={sType}
             >
                 {sourceType.map(option => <FormControlLabel
                     key={option.label}
@@ -98,8 +112,8 @@ function SourceConfig({ currNode, closeBar }) {
                 />)}
             </RadioGroup>
             <Stack gap={2}>
-                {sType === 'file' && <FileConfig closeBar={closeBar} currNode={currNode}></FileConfig>}
-                {sType === 'rdbms' && <RdbmsConfig closeBar={closeBar} currNode={currNode}></RdbmsConfig>}
+                {sType === 'file' && <FileConfig closeBar={closeBar} currNode={currNode} data={nodeData}></FileConfig>}
+                {sType === 'rdbms' && <RdbmsConfig closeBar={closeBar} currNode={currNode} data={nodeData}></RdbmsConfig>}
             </Stack>
         </Stack>
     )
@@ -134,19 +148,18 @@ const ActionButtons = ({ handleSubmit, closeBar }) => {
 
 ActionButtons.propTypes = {
     handleSubmit: propTypes.func,
-    closeBar: propTypes.func
+    closeBar: propTypes.func,
 }
 //--------------------------------------------------------------
 
-const FileConfig = ({ closeBar, currNode }) => {
-    const [fileArea, setFileArea] = useState('')
-    const [fileType, setFileType] = useState('')
-    const [filePath, setFilePath] = useState('')
+const FileConfig = ({ closeBar, currNode, data }) => {
+    const [fileArea, setFileArea] = useState(data?.loader_type || '');
+    const [fileType, setFileType] = useState(data?.loader_config?.file_type || '');
+    const [filePath, setFilePath] = useState(data?.loader_config?.file_path || '');
     const [bucketName, setBucketName] = useState('')
     const [keyPath, setKeyPath] = useState('')
     const [showBucketField, setShowBucketField] = useState(false)
     const [{ pipeline }, { setPipeline }] = pipelineStore()
-
 
     async function handleSubmit() {
         let task_id = currNode.id
@@ -264,7 +277,8 @@ const FileConfig = ({ closeBar, currNode }) => {
 
 FileConfig.propTypes = {
     closeBar: propTypes.func,
-    currNode: propTypes.any
+    currNode: propTypes.any,
+    data: propTypes.object
 }
 
 //---------------------------------------------------------------------
@@ -280,7 +294,8 @@ const RdbmsType = [
     }
 ]
 
-const RdbmsConfig = ({ closeBar, currNode }) => {
+const RdbmsConfig = ({ closeBar, currNode, data }) => {
+    console.log(data);
     const [dbType, setDbType] = useState('')
     const [host, setHost] = useState('')
     const [port, setPort] = useState('')
@@ -291,7 +306,6 @@ const RdbmsConfig = ({ closeBar, currNode }) => {
     const [{ pipeline }, { setPipeline }] = pipelineStore()
 
     async function handleSubmit() {
-
         let task_id = currNode.id
         let payload = {
             "config_type": "rdbms",
@@ -314,7 +328,6 @@ const RdbmsConfig = ({ closeBar, currNode }) => {
 
     return (
         <>
-            <MenuStyle>
                 <FormControl fullWidth variant='standard' required>
                     <InputLabel id="select-file-area">Database Type</InputLabel>
                     <Select
@@ -393,7 +406,6 @@ const RdbmsConfig = ({ closeBar, currNode }) => {
                     helperText="Enter the name of the database table"
                     required
                 />
-            </MenuStyle>
 
             <ActionButtons
                 closeBar={closeBar}
@@ -406,5 +418,6 @@ const RdbmsConfig = ({ closeBar, currNode }) => {
 
 RdbmsConfig.propTypes = {
     closeBar: propTypes.func,
-    currNode: propTypes.any
+    currNode: propTypes.any,
+    data: propTypes.object
 }
