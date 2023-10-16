@@ -180,19 +180,20 @@ class SparkSourceReaders:
         try:
             logger.info("Loading data from JSON file - %s",
                         self.current_task.loader_config['file_path'])
-            
+
             if not os.path.exists(self.current_task.loader_config['file_path']):
                 logger.error('JSON file path - %s does not exist',
                              self.current_task.loader_config['file_path'])
                 raise MinimalETLException(
                     f'JSON file path - {self.current_task.loader_config["file_path"]} does not exist')
-            
-            _df = self.spark.read.json(self.current_task.loader_config['file_path'])
+
+            _df = self.spark.read.json(
+                self.current_task.loader_config['file_path'])
 
             _df.createOrReplaceTempView(self.current_task.uuid)
             logger.info("Successfully created dataframe from JSON - %s",
                         self.current_task.loader_config['file_path'])
-            
+
             asyncio.create_task(self.current_task.pipeline.variable_manager.add_variable(
                 self.current_task.pipeline.uuid,
                 self.current_task.uuid,

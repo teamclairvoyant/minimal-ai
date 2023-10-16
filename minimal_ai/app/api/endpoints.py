@@ -1,19 +1,34 @@
 import logging
 
+import psutil
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import JSONResponse
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from minimal_ai.app.api.db import get_db_session
+from minimal_ai.app.api.db import get_db
 from minimal_ai.app.services.minimal_exception import MinimalETLException
-from minimal_ai.app.services.pipeline_scheduler import schedule_pipeline
 from minimal_ai.app.services.pipeline_service import PipelineService
 from minimal_ai.app.services.task_service import TaskService
 from minimal_ai.app.utils.constants import (CronModel, PipelineModel,
                                             PipelineUpdateModel, TaskModel)
 
 api_router = APIRouter()
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
+
+
+@api_router.get("/cpu_ram_info")
+async def cpu_ram_info() -> JSONResponse:
+    """endpoint to get cpu and ram info
+    """
+    try:
+        logger.info("GET /cpu_ram_info")
+        return JSONResponse(status_code=status.HTTP_200_OK,
+                            content={"cpu": f"{psutil.cpu_percent(interval=1)}%",
+                                     "ram": f"{round(psutil.virtual_memory().available * 100 /psutil.virtual_memory().total,2)}%"})
+    except Exception as excep:
+        logger.error("GET /cpu_ram_info - %s", excep.args)
+        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"error": excep.args})
 
 
 @api_router.get("/pipelines_summary")
@@ -118,38 +133,35 @@ async def pipelines_summary() -> JSONResponse:
         return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"error": excep.args})
 
 
-@api_router.get("/test")
-async def test_api(db: AsyncSession = Depends(get_db_session)):
-    """test endpoint"""
-    try:
-        logger.info("GET /test")
-        logger.info(db)
-        return JSONResponse(status_code=status.HTTP_200_OK, content={"ok": "ok"})
-    except MinimalETLException as excep:
-        logger.error("GET /summary - %s", excep.args)
-        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"error": excep.args})
+# @api_router.get("/test")
+# async def test_api(pipeline_uuid: str, db_sess: AsyncSession = Depends(get_db)):
+#     """test endpoint"""
+#     try:
+#         logger.info("GET /test")
+#         logger.info(db_sess)
+#         await get_next_run_time(pipeline_uuid, db_sess)
+
+#         return JSONResponse(status_code=status.HTTP_200_OK, content={"ok": "ok"})
+#     except MinimalETLException as excep:
+#         logger.error("GET /summary - %s", excep.args)
+#         return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"error": excep.args})
 
 
 @api_router.get("/summary")
-async def get_summary() -> JSONResponse:
+async def get_summary(db_sess: AsyncSession = Depends(get_db)) -> JSONResponse:
     """ endpoint to fetch summary
     """
     try:
         logger.info("GET /summary")
         return JSONResponse(status_code=status.HTTP_200_OK,
-                            content={"summary": {
-                                "total_pipelines": 20,
-                                "scheduled_count": 17,
-                                "successful_count": 13,
-                                "failed_count": 3
-                            }})
+                            content={"summary": await PipelineService.get_pipelines_summary(db_sess)})
     except MinimalETLException as excep:
         logger.error("GET /summary - %s", excep.args)
         return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"error": excep.args})
 
 
 @api_router.get("/pipeline/{uuid}")
-async def get_pipeline_by_uuid(uuid: str) -> JSONResponse:
+async def get_pipeline_by_uuid(uuid: str, db_sess: AsyncSession = Depends(get_db)) -> JSONResponse:
     """ endpoint to fetch pipline from uuid
 
     Args:
@@ -158,7 +170,7 @@ async def get_pipeline_by_uuid(uuid: str) -> JSONResponse:
     """
     try:
         logger.info("GET /pipeline/%s", uuid)
-        pipeline = await PipelineService.get_pipeline_from_uuid(uuid)
+        pipeline = await PipelineService.get_pipeline_from_uuid(uuid, db_sess)
         logger.info("GET /pipeline/%s %s", uuid, status.HTTP_200_OK)
         return JSONResponse(status_code=status.HTTP_200_OK,
                             content={"pipeline": pipeline})
@@ -168,7 +180,7 @@ async def get_pipeline_by_uuid(uuid: str) -> JSONResponse:
 
 
 @api_router.delete("/pipeline/{uuid}")
-async def delete_pipeline(uuid: str) -> JSONResponse:
+async def delete_pipeline(uuid: str, db_sess: AsyncSession = Depends(get_db)) -> JSONResponse:
     """ endpoint to delete pipeline
 
     Args:
@@ -177,7 +189,7 @@ async def delete_pipeline(uuid: str) -> JSONResponse:
     """
     try:
         logger.info("DELETE /pipeline/%s", uuid)
-        pipeline = await PipelineService.delete_pipeline_by_uuid(uuid)
+        pipeline = await PipelineService.delete_pipeline_by_uuid(uuid, db_sess)
 
         return JSONResponse(status_code=status.HTTP_200_OK, content={"pipeline": pipeline})
     except MinimalETLException as excep:
@@ -186,13 +198,13 @@ async def delete_pipeline(uuid: str) -> JSONResponse:
 
 
 @api_router.get("/pipelines")
-async def get_pipeline_list() -> JSONResponse:
+async def get_pipeline_list(db_sess: AsyncSession = Depends(get_db)) -> JSONResponse:
     """ endpoint to fetch list of pipelines
 
     """
     try:
         logger.info("GET /pipelines")
-        pipelines = await PipelineService.get_all_pipelines_from_repo()
+        pipelines = await PipelineService.get_all_pipelines_from_repo(db_sess)
         return JSONResponse(status_code=status.HTTP_200_OK, content={"pipelines": pipelines})
 
     except MinimalETLException as excep:
@@ -201,7 +213,7 @@ async def get_pipeline_list() -> JSONResponse:
 
 
 @api_router.post("/pipeline")
-async def add_pipeline(pipeline_config: PipelineModel, db: AsyncSession = Depends(get_db_session)) -> JSONResponse:
+async def add_pipeline(pipeline_config: PipelineModel, db_sess: AsyncSession = Depends(get_db)) -> JSONResponse:
     """ endpoint to create and register pipeline in the repo
 
     Args:
@@ -211,7 +223,7 @@ async def add_pipeline(pipeline_config: PipelineModel, db: AsyncSession = Depend
     try:
         logger.info("POST /pipeline %s", pipeline_config.name)
         pipeline = await PipelineService.create_pipeline(
-            pipeline_config.name, pipeline_config.executor_config, db)
+            pipeline_config.name, pipeline_config.executor_config, pipeline_config.description, db_sess)
         return JSONResponse(status_code=status.HTTP_201_CREATED,
                             content={"pipeline": pipeline})
     except MinimalETLException as excep:
@@ -220,7 +232,8 @@ async def add_pipeline(pipeline_config: PipelineModel, db: AsyncSession = Depend
 
 
 @api_router.put("/pipeline/{uuid}")
-async def update_pipeline(uuid: str, pipeline_config: PipelineUpdateModel) -> JSONResponse:
+async def update_pipeline(uuid: str, pipeline_config: PipelineUpdateModel,
+                          db_sess: AsyncSession = Depends(get_db)) -> JSONResponse:
     """ endpoint to update exixting pipeline
 
     Args:
@@ -230,7 +243,7 @@ async def update_pipeline(uuid: str, pipeline_config: PipelineUpdateModel) -> JS
     try:
         logger.info("PUT /pipeline/%s", uuid)
         pipeline = await PipelineService.update_pipeline(
-            uuid, pipeline_config.reactflow_props)
+            uuid, pipeline_config.reactflow_props, db_sess)
         return JSONResponse(status_code=status.HTTP_201_CREATED,
                             content={"pipeline": pipeline})
     except MinimalETLException as excep:
@@ -239,7 +252,7 @@ async def update_pipeline(uuid: str, pipeline_config: PipelineUpdateModel) -> JS
 
 
 @api_router.post("/pipeline/{uuid}/task")
-async def add_task(uuid: str, task_config: TaskModel) -> JSONResponse:
+async def add_task(uuid: str, task_config: TaskModel, db_sess: AsyncSession = Depends(get_db)) -> JSONResponse:
     """ endpoint to add task to a pipeline
 
     Args:
@@ -248,7 +261,7 @@ async def add_task(uuid: str, task_config: TaskModel) -> JSONResponse:
     """
     try:
         logger.info("POST /pipeline/%s/task %s", uuid, task_config.name)
-        task = await TaskService.add_task_to_pipeline(uuid, task_config)
+        task = await TaskService.add_task_to_pipeline(uuid, task_config, db_sess)
         return JSONResponse(status_code=status.HTTP_201_CREATED,
                             content={"pipeline": task})
     except MinimalETLException as excep:
@@ -337,7 +350,7 @@ async def delete_task_by_uuid(pipeline_uuid: str, task_uuid: str) -> JSONRespons
 
 @api_router.put("/pipeline/{pipeline_uuid}/task/{task_uuid}")
 async def update_task(pipeline_uuid: str, task_uuid: str,
-                      request: Request) -> JSONResponse:
+                      request: Request, db_sess: AsyncSession = Depends(get_db)) -> JSONResponse:
     """ endpoint to update task properties
 
     Args:
@@ -349,7 +362,7 @@ async def update_task(pipeline_uuid: str, task_uuid: str,
 
     try:
         logger.info("PUT /pipeline/%s/task/%s", pipeline_uuid, task_uuid)
-        pipeline = await TaskService.update_task_by_config(pipeline_uuid, task_uuid, request)
+        pipeline = await TaskService.update_task_by_config(pipeline_uuid, task_uuid, request, db_sess)
 
         return JSONResponse(status_code=status.HTTP_200_OK,
                             content={'pipeline': pipeline})
@@ -361,7 +374,7 @@ async def update_task(pipeline_uuid: str, task_uuid: str,
 
 
 @api_router.get("/pipeline/{pipeline_uuid}/execute")
-async def execute_pipeline(pipeline_uuid: str) -> JSONResponse:
+async def execute_pipeline(pipeline_uuid: str, db_sess: AsyncSession = Depends(get_db)) -> JSONResponse:
     """endpoint to trigger pipline execution
 
     Args:
@@ -371,7 +384,7 @@ async def execute_pipeline(pipeline_uuid: str) -> JSONResponse:
     try:
         logger.info("executing pipeline - %s", pipeline_uuid)
         execution_details = await PipelineService.execute_pipeline_by_uuid(
-            pipeline_uuid)
+            pipeline_uuid, db_sess)
         return JSONResponse(status_code=status.HTTP_200_OK, content={"execution_details": execution_details})
 
     except MinimalETLException as excep:
@@ -380,7 +393,7 @@ async def execute_pipeline(pipeline_uuid: str) -> JSONResponse:
 
 
 @api_router.post("/pipeline/{pipeline_uuid}/schedule")
-async def schedule_task(pipeline_uuid: str, cron_time: CronModel):
+async def schedule_job(pipeline_uuid: str, cron_time: CronModel):
     """endpoint to schedule pipeline esecution
 
     Args:
@@ -389,9 +402,8 @@ async def schedule_task(pipeline_uuid: str, cron_time: CronModel):
     """
     try:
         logger.info("GET /pipeline/%s/schedule", pipeline_uuid)
-        logger.debug(cron_time)
-        schedule_pipeline(pipeline_uuid, cron_time,
-                          PipelineService.scheduled_execution)
+
+        await PipelineService.schedule(pipeline_uuid, cron_time)
         return JSONResponse(status_code=status.HTTP_200_OK,
                             content={'status': "scheduled"})
     except MinimalETLException as excep:

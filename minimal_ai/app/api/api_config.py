@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     #     default=os.path.join(REPO_PATH.default, "scheduler"))
     THREAD_POOL_EXECUTOR: int = Field(default=20)
     PROCESS_POOL_EXECUTOR: int = Field(default=5)
+    MINIMAL_ASYNC_DATABASE_URL: str = "sqlite+aiosqlite:///minimalAi.sqlite"
+    MINIMAL_SYNC_DATABASE_URL: str = "sqlite:///minimalAi.sqlite"
+    MINIMAL_SCHEDULER_TABLE: str = "pipeline_scheduler"
 
 
 settings = Settings()

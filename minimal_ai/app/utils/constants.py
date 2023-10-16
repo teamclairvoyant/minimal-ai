@@ -5,16 +5,24 @@ from pydantic import BaseModel
 
 
 class PipelineStatus(str, Enum):
-    """Schedule status class
+    """Pipeline status class
     """
     EXECUTED = 'executed'
-    SCHEDULED = 'scheduled'
     DRAFT = 'draft'
     FAILED = 'failed'
 
 
+class PipelineExecutionStatus(str, Enum):
+    """Execution status class
+    """
+    Running = 'running'
+    COMPLETED = 'completed'
+    FAILED = 'failed'
+    CANCELLED = 'cancelled'
+
+
 class TaskStatus(str, Enum):
-    """ Block status class
+    """ Task status class
     """
     EXECUTED = 'executed'
     FAILED = 'failed'
@@ -43,8 +51,8 @@ class CronModel(BaseModel):
     year: str
     month: str
     day: str
-    week: str
-    day_of_week: str
+    week: str | None = None
+    day_of_week: str | None = None
     hour: str
     minute: str
     second: str
@@ -64,6 +72,7 @@ class PipelineModel(BaseModel):
     """
     name: str
     executor_config: Dict[str, str] | None = None
+    description: str | None = None
 
 
 class PipelineUpdateModel(BaseModel):

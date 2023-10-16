@@ -7,33 +7,32 @@ from typing import Tuple
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
 
 from minimal_ai.app.api.api_config import settings
+from minimal_ai.app.api.db import sessionmanager
 from minimal_ai.app.api.endpoints import api_router
-from minimal_ai.app.app_logger.logger import setup_logging
-from minimal_ai.app.services.pipeline_scheduler import (get_scheduler_obj,
-                                                        start_scheduler,
-                                                        stop_scheduler)
+from minimal_ai.app.app_logger.logger import CustomizeLogger
+from minimal_ai.app.services.pipeline_scheduler import get_scheduler
 
-setup_logging(settings.LOG_DIR)
-logger = logging.getLogger(__name__)
-services = {}
+# setup_logging(settings.LOG_DIR)
+# logger = logging.getLogger(__name__)
+logger = CustomizeLogger.make_logger()
 
 
 @asynccontextmanager
 async def lifespan_event(app: FastAPI):
     """method to control the scheduler lifespan with that of app
     """
-
     logger.info("Initialising scheduler instance")
-    services['scheduler'] = get_scheduler_obj()
-
-    start_scheduler(services['scheduler'])
+    scheduler = get_scheduler()
+    sessionmanager.init()
+    scheduler.start()
 
     yield
-    stop_scheduler(services['scheduler'])
-
+    scheduler.shutdown()
+    await sessionmanager.close()
 
 app = FastAPI(
     title=settings.PROJECT_NAME, openapi_url=f"{settings.API_STR}/openapi.json",
