@@ -1,7 +1,9 @@
-import {Row, Col, Avatar, Badge, Popover} from 'antd'
+import {Flex, Col, Avatar, Badge, Popover} from 'antd'
 import { Link as RouterLink } from 'react-router-dom';
 import { BellOutlined, UserOutlined } from '@ant-design/icons';
 import logo from '../assets/images/EXL_Service_logo.png'
+
+
 function MainHeader() {
 
   const notification = (
@@ -21,8 +23,8 @@ function MainHeader() {
 
 
   return (
-    <Row style={{paddingLeft: "24px", justifyContent: "space-between"}}>
-      <Col style={{paddingTop: 10}}>
+    <Flex gap="middle" style={{widht: "100%", height: "3rem"}} align='center' justify='space-between'>
+      <Col style={{paddingTop: "0.5rem"}}>
         <RouterLink to="/">
           <img
               width={40}
@@ -32,21 +34,21 @@ function MainHeader() {
         </RouterLink>
         
       </Col>
-      <Row gutter={30}>
-        <Col style={{paddingTop: 10}}>
+      <Flex gap="middle">
+        <Col >
           <Popover content={notification} title="New Notification">
               <Badge count={0} offset={[5,2]}>
                 <Avatar icon={<BellOutlined />}/>
               </Badge>
           </Popover>
         </Col>
-        <Col style={{paddingTop: 10}}>
+        <Col >
           <Popover content={userSettings}>
             <Avatar style={{ backgroundColor: '#db553d' }} icon={<UserOutlined />} />
           </Popover>
         </Col>
-      </Row>
-    </Row>
+      </Flex>
+    </Flex>
   )
 }
 

@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const siderStyle = {
     backgroundColor:"inherit",
     border:0,
-    height: "300px",
+    height: "100%",
     display: "flex",
     flexDirection: "column",
     paddingTop: 40
@@ -81,7 +81,7 @@ function WorkbookSider() {
     ]
     
   return (
-    <div style={{paddingTop:"10px"}}>
+    <div>
       <Menu mode="inline" defaultSelectedKeys={["2"]} items={items} style={siderStyle} onClick={(e) => {navigateWorkbook(e)}}/>
     </div>
   )

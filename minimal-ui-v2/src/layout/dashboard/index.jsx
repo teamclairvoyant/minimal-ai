@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { backendApi } from "../../api/api";
-import { Typography,Skeleton, Row, Card } from "antd"
+import { Typography,Skeleton, Row, Card, Flex } from "antd"
 import PipelineMetricsChart from "../../component/Dashboard/PipelineMetricsChart";
 import PipelineMetricsCard from "../../component/Dashboard/PipelineMetricsCard";
 
@@ -8,23 +8,19 @@ const { Title } = Typography
 
 const subBarStyle = {
   width: '100%',
-  color: "#fff",
-  display: 'flex',
-  alignItems: 'center',
-  paddingLeft: "24px",
-  height: "40px"
+  color: "#fff"
 }
 const pipelineMetricsBox = {
   boxShadow: "rgb(23 78 87) 0px 1px 2px 0px, rgb(248 248 248 / 53%) 0px 1px 6px -1px, rgb(8 8 8) 0px 2px 4px 0px",
-  marginLeft: "1.5%",
+  marginLeft: "1rem",
   marginTop: "30px",
-  height:300,
-  width: "67%"
+  height: "15rem",
+  width: "30rem"
 }
 
 const monthNames = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
-];
+]
 
 const today = new Date()
 
@@ -40,12 +36,14 @@ function Dashboard() {
     }
     getSummary()
   }, [])
+
   if (!summary) return <Skeleton/>
+  
   return (
-    <>
-      <div style={subBarStyle}>
+    <Flex vertical>
+      <Flex style={subBarStyle}>
         <Title level={3} style={{color:"white"}}>Today:&nbsp;&nbsp;{monthNames[today.getMonth()]}&nbsp;{today.getDate()},&nbsp;{today.getFullYear()}</Title>
-      </div>
+      </Flex>
       
       <PipelineMetricsCard summary={summary} />
       <Row style={{flexWrap: "nowrap"}}>
@@ -54,7 +52,7 @@ function Dashboard() {
         <Card style={pipelineMetricsBox}><Skeleton></Skeleton></Card>
       </Row>
 
-    </>
+    </Flex>
   )
 }
 

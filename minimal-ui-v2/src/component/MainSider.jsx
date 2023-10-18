@@ -3,12 +3,8 @@ import { Menu } from 'antd';
 import { useNavigate } from 'react-router-dom';
 
 const siderStyle = {
-    backgroundColor:"inherit",
     border:0,
-    height: "300px",
-    display: "flex",
-    flexDirection: "column",
-    paddingTop: 40
+    paddingTop: "1rem"
 }
 
 function MainSider() {
@@ -34,19 +30,19 @@ function MainSider() {
             key: "1",
             icon: <Icon icon="carbon:dashboard" color="white" height={30} width={30} />,
             style: {
-                paddingLeft:10
+                paddingLeft:"0.8rem"
             }
         },
         {
             key: "2",
             icon: <Icon icon="cil:list" color="white" height={30} width={30} />,
             style: {
-                paddingLeft:10
+                paddingLeft:"0.8rem"
             }
         }
     ]
   return (
-    <div style={{paddingTop:"10px"}}>
+    <div>
       <Menu mode="inline" defaultSelectedKeys={['1']} items={items} style={siderStyle} onClick={(e) => {navigateDashboard(e)}}/>
     </div>
   )

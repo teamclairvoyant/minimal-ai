@@ -1,43 +1,54 @@
-import { Layout } from 'antd';
+import { Breadcrumb, Layout, Menu, theme  } from 'antd';
 import { Outlet } from "react-router-dom";
 import MainHeader from '../../component/MainHeader';
 import MainSider from '../../component/MainSider';
 
-const { Content, Sider } = Layout;
+const { Header,Content, Sider } = Layout;
 
 const siderStyle = {
-    position: 'fixed',
-    height: "100vh",
-    backgroundColor: '#202020',
-    overflow: "auto",
+    backgroundColor: '#141414',
     top: 0,
     left: 0,
-    bottom: 0
-};
+}
 
 const contentStyle = {
     color: '#fff',
-    marginTop: "10px",
-    marginRight: "15px",
-    marginLeft: "60px",
-    overflow: "initial"
-};
+    marginRight: "1rem",
+    marginLeft: "1rem",
+    display: "flex",
+    flexDirection: "column",
+}
+
+const headerStyle = {
+    backgroundColor: '#141414',
+    height: "3rem",
+    position: "sticky",
+    top: 0,
+    zIndex: 1,
+    paddingLeft: "1rem",
+    paddingRight: "0.5rem"
+}
   
 
 function Home() {
-  return (
-    <Layout>
-        <Sider width="60px" style={siderStyle}>
-            <MainSider/>
-        </Sider>
-        <Layout>
-            <Content style={contentStyle}>
+    
+    return (
+        <Layout style={{height: "100vh"}}>
+            <Header style={headerStyle}>
                 <MainHeader/>
-                <Outlet/>
-            </Content>
+            </Header>
+            <Layout>
+                <Sider width={"4rem"} style={siderStyle}>
+                    <MainSider/>
+                </Sider>
+                <Layout>
+                    <Content style={contentStyle}>
+                        <Outlet/>
+                    </Content>
+                </Layout>
+            </Layout>
         </Layout>
-    </Layout>
-  )
+    )
 }
 
 export default Home
