@@ -2,10 +2,8 @@ import asyncio
 import logging
 from typing import Any, Dict, List
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from minimal_ai.app.api.db import sessionmanager
 from minimal_ai.app.models.pipeline import Pipeline
+from minimal_ai.app.services.database import CTX_SESSION, create_session
 from minimal_ai.app.services.pipeline_scheduler import schedule_pipeline
 from minimal_ai.app.utils import TaskType
 
@@ -15,8 +13,7 @@ logger = logging.getLogger(__name__)
 class PipelineService:
 
     @staticmethod
-    async def create_pipeline(name: str, executor_config: Dict[str, str] | None, description: str | None,
-                              db: AsyncSession) -> Dict:
+    async def create_pipeline(name: str, executor_config: Dict[str, str] | None, description: str | None) -> Dict:
         """method to create the pipeline
 
         Args:
@@ -29,11 +26,10 @@ class PipelineService:
         """
         pipeline = Pipeline.create(name, executor_config, description)
         logger.info("Pipeline - %s created", name)
-        return await pipeline.pipeline_summary(db)
+        return await pipeline.pipeline_summary()
 
     @staticmethod
-    async def update_pipeline(pipeline_uuid: str, reactflow_props: Dict[Any, Any],
-                              db: AsyncSession) -> Dict:
+    async def update_pipeline(pipeline_uuid: str, reactflow_props: Dict[Any, Any]) -> Dict:
         """method to update existing pipeline
 
         Args:
@@ -47,10 +43,10 @@ class PipelineService:
         logger.info("Pipeline - %s fetched", pipeline_uuid)
         pipeline.add_reactflow_props(reactflow_props)
 
-        return await pipeline.pipeline_summary(db)
+        return await pipeline.pipeline_summary()
 
     @staticmethod
-    async def get_pipeline_from_uuid(uuid: str, db: AsyncSession) -> Dict:
+    async def get_pipeline_from_uuid(uuid: str) -> Dict:
         """method to get pipeline from uuid
 
         Args:
@@ -61,11 +57,10 @@ class PipelineService:
         """
         pipeline = await Pipeline.get_pipeline_async(uuid)
         logger.info("Pipeline - %s fetched", uuid)
-        return await pipeline.pipeline_summary(db)
+        return await pipeline.pipeline_summary()
 
     @staticmethod
-    async def delete_pipeline_by_uuid(uuid: str,
-                                      db: AsyncSession) -> Dict:
+    async def delete_pipeline_by_uuid(uuid: str) -> Dict:
         """method to delete pipeline by the uuid
 
         Args:
@@ -79,10 +74,10 @@ class PipelineService:
 
         pipeline.delete()
         logger.info("Pipeline - %s deleted successfully", uuid)
-        return await pipeline.pipeline_summary(db)
+        return await pipeline.pipeline_summary()
 
     @staticmethod
-    async def get_all_pipelines_from_repo(db: AsyncSession) -> List[Dict]:
+    async def get_all_pipelines_from_repo() -> List[Dict]:
         """method to fetch list of pipelines
         """
 
@@ -97,19 +92,19 @@ class PipelineService:
         )
 
         pipelines = [
-            await pipeline.pipeline_summary(db) for pipeline in _pipelines if pipeline is not None]
+            await pipeline.pipeline_summary() for pipeline in _pipelines if pipeline is not None]
 
         return pipelines
 
     @staticmethod
-    async def get_pipelines_summary(db: AsyncSession) -> Dict[Any, Any]:
+    async def get_pipelines_summary() -> Dict[Any, Any]:
         """method to get summary of pipelines
         """
-        summary = await Pipeline.summary(db)
+        summary = await Pipeline.summary()
         return summary
 
     @staticmethod
-    async def execute_pipeline_by_uuid(pipeline_uuid: str, db_sess: AsyncSession) -> Dict:
+    async def execute_pipeline_by_uuid(pipeline_uuid: str) -> Dict:
         """method to trigger pipeline execution
 
         Args:
@@ -123,19 +118,19 @@ class PipelineService:
             if pipeline.tasks[task]['task_type'] == TaskType.DATA_LOADER:
                 root_tasks.append(task)
 
-        await pipeline.execute(root_tasks, db_sess)
+        await pipeline.execute(root_tasks)
 
         return {"pipeline": pipeline_uuid, "status": "COMPLETED"}
 
     @staticmethod
-    def scheduled_execution(pipeline_uuid: str) -> Dict:
+    def scheduled_execution(pipeline_uuid: str):
         """method to trigger the scheduled execution
 
         Args:
             pipeline_uuid (str): uuid of the pipeline
         """
-        db_sess = sessionmanager.sync_session()
-
+        db_sess = create_session()
+        CTX_SESSION.set(db_sess)
         pipeline = Pipeline.get_pipeline(pipeline_uuid)
         root_tasks = []
         logger.info("Loading data sources...")
@@ -144,9 +139,9 @@ class PipelineService:
             if pipeline.tasks[task]['task_type'] == TaskType.DATA_LOADER:
                 root_tasks.append(task)
 
-        asyncio.run(pipeline.scheduled_execute(root_tasks, db_sess))
-
-        return {"pipeline": pipeline_uuid, "status": "COMPLETED"}
+        asyncio.run(pipeline.scheduled_execute(root_tasks))
+        asyncio.run(db_sess.commit())
+        asyncio.run(db_sess.close())
 
     @staticmethod
     async def schedule(pipeline_uuid: str, cron_time):

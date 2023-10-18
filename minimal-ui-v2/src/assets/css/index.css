@@ -1,0 +1,72 @@
+body {
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+    background-color: black;
+}
+
+::-webkit-scrollbar {
+    width: 3px;
+  }
+  
+  /* Track */
+  ::-webkit-scrollbar-track {
+    background: #000000; 
+  }
+   
+  /* Handle */
+  ::-webkit-scrollbar-thumb {
+    background: #888; 
+  }
+  
+  /* Handle on hover */
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+.pipeline-metrics-card-body{
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  width: 100%;  
+}
+
+.pipelineNew-btn-grad {
+  background-image: linear-gradient(to right, #fe8c00 0%, #f83600  51%, #fe8c00  100%);
+  margin: 10px 0px;
+  text-align: center;
+  text-transform: capitalize;
+  transition: 0.5s;
+  background-size: 200% auto;
+  color: white;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.pipelineNew-btn-grad:hover {
+  background-position: right center; /* change the direction of the change here */
+  color: #fff;
+  text-decoration: none;
+}
+
+.tableAction-logs-icon {
+  color: white;
+}
+
+.tableAction-execute-icon {
+  color: white;
+}
+
+.tableAction-logs-icon:hover {
+  color: rgb(241, 196, 72);
+  cursor: pointer;
+}
+
+.tableAction-execute-icon:hover {
+  color: rgb(13, 174, 88);
+  cursor: pointer;
+}
+
+#components-form-demo-control-ref .ant-btn {
+  margin-right: 8px;
+}

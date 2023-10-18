@@ -10,11 +10,10 @@ from typing import Any, Dict, List
 import aiofiles
 from pydantic.dataclasses import dataclass
 from pydantic.fields import Field
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from minimal_ai.app.api.api_config import settings
-from minimal_ai.app.models.pipeline_execution import PipelineExecution
-from minimal_ai.app.models.scheduler import PipelineScheduler
+from minimal_ai.app.entity import (PipelineExecutionEntity,
+                                   PipelineSchedulerEntity)
 from minimal_ai.app.models.task import Task
 from minimal_ai.app.models.variable import VariableManager
 from minimal_ai.app.services.minimal_exception import MinimalETLException
@@ -131,19 +130,11 @@ class Pipeline:
             "reactflow_props": self.reactflow_props
         }
 
-    async def pipeline_summary(self, db: AsyncSession) -> Dict:
-        """_summary_
-
-        Args:
-            db (AsyncSession): database session
-
-        Returns:
-            Dict: pipeline summary object
-        """
+    async def pipeline_summary(self) -> Dict:
         base_data = self.base_obj()
         base_data.update({
-            "next_run_time": await self.next_run_time(db),
-            "execution_summary": await self.execution_summary_by_uuid(db)
+            "next_run_time": await self.next_run_time(),
+            "execution_summary": await self.execution_summary_by_uuid()
         })
         return base_data
 
@@ -286,7 +277,7 @@ class Pipeline:
         )
 
     @classmethod
-    async def summary(cls, db) -> Dict[str, int]:
+    async def summary(cls) -> Dict[str, int]:
         """method to fetch execution summary of pipelines
 
         Args:
@@ -298,24 +289,24 @@ class Pipeline:
         logger.info("Fetching execution summary for the pipelines")
         summary = {}
         summary['total_pipelines'] = len(cls.get_all_pipelines())
-        summary['execution_details'] = await PipelineExecution.get_execution_summary(db)
+        summary['execution_details'] = await PipelineExecutionEntity().get_execution_summary()
 
         return summary
 
-    async def next_run_time(self, db) -> str | None:
+    async def next_run_time(self) -> str | None:
         """
         next run time of the pipeline
         """
         logger.info("Fetching next run time for pipeline - %s", self.uuid)
 
-        return await PipelineScheduler.get_next_run_time(db, self.uuid)
+        return (await PipelineSchedulerEntity().get(self.uuid))['next_run_time']
 
-    async def execution_summary_by_uuid(self, db) -> dict | None:
+    async def execution_summary_by_uuid(self) -> dict | None:
         """method to get the pipeline execution summary
         """
         logger.info(
             "fetching pipeline execution summary for pipeline - %s", self.uuid)
-        summary = await PipelineExecution.get_execution_summary(db, self.uuid)
+        summary = await PipelineExecutionEntity().get_execution_summary(self.uuid)
         if summary:
             return summary
         return None
@@ -382,7 +373,7 @@ class Pipeline:
             raise MinimalETLException(
                 f'Pipeline - {self.uuid} failed to save | {excep.args}')
 
-    async def execute(self, root_tasks: List, db: AsyncSession) -> None:
+    async def execute(self, root_tasks: List) -> None:
         """method to execute the pipeline
         """
         try:
@@ -393,11 +384,10 @@ class Pipeline:
                     self.tasks[task_conf['uuid']] = exec_data['task']
 
                 return asyncio.create_task(build_and_execute())
-
-            exec_data = await PipelineExecution.create(db, trigger="MANUAL",
-                                                       pipeline_uuid=self.uuid,
-                                                       execution_date=datetime.now(),
-                                                       status="RUNNING")
+            _exec = PipelineExecutionEntity()
+            exec_data = await _exec.create({"trigger": "MANUAL", "pipeline_uuid": self.uuid,
+                                            "execution_date": datetime.now(),
+                                            "status": "RUNNING"})
 
             if not root_tasks:
                 raise MinimalETLException(
@@ -441,19 +431,20 @@ class Pipeline:
             self.status = PipelineStatus.EXECUTED
             self.save()
 
-            await PipelineExecution.update_status(db,
-                                                  exec_data.id, "COMPLETED")  # type: ignore
+            await PipelineExecutionEntity().update(key="id", value=exec_data['id'],
+                                                   payload={"status": "COMPLETED"})
+
         except Exception as excep:
             self.status = PipelineStatus.FAILED
             self.save()
 
-            await PipelineExecution.update_status(db,
-                                                  exec_data.id, "FAILED")  # type: ignore
+            await PipelineExecutionEntity().update(key="id", value=exec_data['id'],  # type: ignore
+                                                   payload={"status": "FAILED"})
 
             raise MinimalETLException(
                 f'Pipeline - {self.uuid} failed to execute | {excep.args}')
 
-    async def scheduled_execute(self, root_tasks: List, db) -> None:
+    async def scheduled_execute(self, root_tasks: List) -> None:
         """method to execute the pipeline at scheduled time
         """
         try:
@@ -465,10 +456,10 @@ class Pipeline:
 
                 return asyncio.create_task(build_and_execute())
 
-            exec_data = PipelineExecution.sync_create(db, trigger="SCHEDULED",
-                                                      pipeline_uuid=self.uuid,
-                                                      execution_date=datetime.now(),
-                                                      status="RUNNING")
+            _exec = PipelineExecutionEntity()
+            exec_data = await _exec.create({"trigger": "SCHEDULED", "pipeline_uuid": self.uuid,
+                                            "execution_date": datetime.now(),
+                                            "status": "RUNNING"})
 
             spark, spark_config = SparkMain(
                 self.uuid, self.executor_config).start_spark()
@@ -507,14 +498,14 @@ class Pipeline:
             spark.stop()
             self.status = PipelineStatus.EXECUTED
             self.save()
-            PipelineExecution.sync_update_status(
-                db, exec_data.id, "COMPLETED")   # type: ignore
+            await PipelineExecutionEntity().update(key="id", value=exec_data['id'],
+                                                   payload={"status": "COMPLETED"})
 
         except Exception as excep:
             self.status = PipelineStatus.FAILED
             self.save()
-            PipelineExecution.sync_update_status(
-                db, exec_data.id, "FAILED")   # type: ignore
+            await PipelineExecutionEntity().update(key="id", value=exec_data['id'],  # type: ignore
+                                                   payload={"status": "FAILED"})
 
             raise MinimalETLException(
                 f'Pipeline - {self.uuid} failed to execute | {excep.args}')

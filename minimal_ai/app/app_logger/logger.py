@@ -1,101 +1,53 @@
 import logging
-import sys
+import logging.config
 from datetime import datetime
-from pathlib import Path
-
-from loguru import logger
-
-from minimal_ai.app.api.api_config import settings
-
-_today = datetime.now().strftime("%Y-%m-%d")
-logging_config = {
-    "path": f"{settings.LOG_DIR}/minimal-app-{_today}.log",
-    "filename": "access.log",
-    "level": "info",
-    "rotation": "7 days",
-    "retention": "1 months",
-    "format": "<level>{level: <8}</level> <green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> - <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>"
-}
 
 
-class InterceptHandler(logging.Handler):
-    loglevel_mapping = {
-        50: 'CRITICAL',
-        40: 'ERROR',
-        30: 'WARNING',
-        20: 'INFO',
-        10: 'DEBUG',
-        0: 'NOTSET',
+def setup_logging(log_dir: str):
+    """Load logging configuration"""
+
+    log_file_name = log_dir + '/' + 'minimal-app-' + \
+        datetime.now().strftime("%Y-%m-%d") + '.log'
+
+    loging_config = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'loggers': {
+            'root': {
+                'level': 'INFO',
+                'handlers': ['debug_console_handler', 'info_rotating_file_handler'],
+            },
+            'src': {
+                'level': 'DEBUG',
+                'propagate': False,
+                'handlers': ['info_rotating_file_handler', 'debug_console_handler'],
+            },
+        },
+        'handlers': {
+            'debug_console_handler': {
+                'level': 'DEBUG',
+                'formatter': 'console',
+                'class': 'logging.StreamHandler',
+                'stream': 'ext://sys.stdout',
+            },
+            'info_rotating_file_handler': {
+                'level': 'WARN',
+                'formatter': 'file',
+                'class': 'logging.handlers.RotatingFileHandler',
+                'filename': log_file_name,
+                'mode': 'a',
+                'maxBytes': 1048576,
+                'backupCount': 10
+            }
+        },
+        'formatters': {
+            'console': {
+                'format': '%(levelname)s:     %(name)s - %(lineno)s - %(message)s'
+            },
+            'file': {
+                'format': '%(asctime)s-%(levelname)s-%(name)s-%(process)d::%(module)s|%(lineno)s:: %(message)s'
+            },
+        },
     }
 
-    def emit(self, record):
-        try:
-            level = logger.level(record.levelname).name
-        except AttributeError:
-            level = self.loglevel_mapping[record.levelno]
-
-        frame, depth = logging.currentframe(), 2
-
-        while frame.f_code.co_filename == logging.__file__:
-            frame = frame.f_back
-            depth += 1
-
-        # log = logger.bind(request_id='app')
-        logger.opt(
-            depth=depth,
-            exception=record.exc_info
-        ).log(level, record.getMessage())
-
-
-class CustomizeLogger:
-
-    @classmethod
-    def make_logger(cls):
-        """methof to create logger
-        """
-        _logger = cls.customize_logging(
-            logging_config.get('path'),  # type: ignore
-            level=logging_config.get('level'),  # type: ignore
-            retention=logging_config.get('retention'),  # type: ignore
-            rotation=logging_config.get('rotation'),  # type: ignore
-            _format=logging_config.get('format')  # type: ignore
-        )
-        return _logger
-
-    @classmethod
-    def customize_logging(cls,
-                          filepath: Path,
-                          level: str,
-                          rotation: str,
-                          retention: str,
-                          _format: str
-                          ):
-        """metod to customize the logger object
-        """
-        logger.remove()
-        logger.add(
-            sys.stdout,
-            enqueue=True,
-            backtrace=True,
-            level=level.upper(),
-            format=_format
-        )
-        logger.add(
-            str(filepath),
-            rotation=rotation,
-            retention=retention,
-            enqueue=True,
-            backtrace=True,
-            level=level.upper(),
-            format=_format
-        )
-        logging.basicConfig(handlers=[InterceptHandler()], level=0)
-        logging.getLogger("uvicorn.access").handlers = [InterceptHandler()]
-        for _log in ['uvicorn',
-                     'uvicorn.error',
-                     'fastapi'
-                     ]:
-            _logger = logging.getLogger(_log)
-            _logger.handlers = [InterceptHandler()]
-
-        return logger.bind(request_id=None, method=None)
+    logging.config.dictConfig(loging_config)

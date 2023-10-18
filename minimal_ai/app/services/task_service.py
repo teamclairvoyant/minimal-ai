@@ -5,7 +5,6 @@ from typing import Dict
 
 import aiofiles
 from fastapi import Request, UploadFile
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from minimal_ai.app.models.pipeline import Pipeline
 from minimal_ai.app.models.task import Task
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 class TaskService:
 
     @staticmethod
-    async def add_task_to_pipeline(pipeline_uuid: str, task_config: TaskModel, db: AsyncSession) -> Dict:
+    async def add_task_to_pipeline(pipeline_uuid: str, task_config: TaskModel) -> Dict:
         """ method to add task to a pipeline
 
         Args:
@@ -33,7 +32,7 @@ class TaskService:
                     priority=task_config.priority,
                     upstream_task_uuids=task_config.upstream_task_uuids)
 
-        return await pipeline.pipeline_summary(db)
+        return await pipeline.pipeline_summary()
 
     @staticmethod
     async def get_task(pipeline_uuid: str, task_uuid: str) -> Dict:
@@ -135,7 +134,7 @@ class TaskService:
         return task
 
     @staticmethod
-    async def update_task_by_config(pipeline_uuid: str, task_uuid: str, request: Request, db: AsyncSession) -> Dict:
+    async def update_task_by_config(pipeline_uuid: str, task_uuid: str, request: Request) -> Dict:
         """ method to update task by config
 
         Args:
@@ -190,4 +189,4 @@ class TaskService:
         pipeline.tasks[task_uuid] = task.base_dict_obj()
         logger.info('Updating pipeline - %s', pipeline_uuid)
         pipeline.save()
-        return await pipeline.pipeline_summary(db)
+        return await pipeline.pipeline_summary()
