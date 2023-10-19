@@ -24,7 +24,7 @@ const monthNames = ["January", "February", "March", "April", "May", "June",
 const today = new Date()
 
 function Dashboard() {
-  const [summary, setSummary] = useState({"total_pipelines":0,"execution_details":{"COMPLETED":0,"FAILED":0,"CANCELLED":0,"RUNNING":0}})
+  const [summary, setSummary] = useState({ "total_pipelines": 0, "execution_details": { "COMPLETED": 0, "FAILED": 0, "CANCELLED": 0, "RUNNING": 0 } })
 
   useEffect(() => {
     async function getSummary() {
@@ -36,19 +36,19 @@ function Dashboard() {
     getSummary()
   }, [])
 
-  if (!summary) return <Skeleton/>
-  
+  if (!summary) return <Skeleton />
+
   return (
     <Flex vertical>
       <Flex style={subBarStyle}>
-        <Title level={3} style={{color:"white"}}>Today:&nbsp;&nbsp;{monthNames[today.getMonth()]}&nbsp;{today.getDate()},&nbsp;{today.getFullYear()}</Title>
+        <Title level={3} style={{ color: "white" }}>Today:&nbsp;&nbsp;{monthNames[today.getMonth()]}&nbsp;{today.getDate()},&nbsp;{today.getFullYear()}</Title>
       </Flex>
-      
+
       <PipelineMetricsCard summary={summary} />
-      
-      <Flex style={{paddingTop: "1rem"}}>
+      <PipelineMetricsCard summary={summary} />
+      <Flex style={{ paddingTop: "1rem" }}>
         <PipelineMetricsChart completed={summary.execution_details.COMPLETED} failed={summary.execution_details.FAILED}
-        cancelled={summary.execution_details.CANCELLED}/>
+          cancelled={summary.execution_details.CANCELLED} />
         <Card style={pipelineMetricsBox}><Skeleton></Skeleton></Card>
       </Flex>
 

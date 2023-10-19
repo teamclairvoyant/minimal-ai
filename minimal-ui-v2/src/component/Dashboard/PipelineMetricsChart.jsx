@@ -24,7 +24,7 @@ PipelineMetricsChart.propTypes = {
 export default function PipelineMetricsChart({completed, cancelled, failed}) {
   if (completed == 0 & cancelled == 0 & failed == 0){
     return (
-      <Card bordered={false} style={pipelineMetricsCard} bodyStyle={{height:300,width:300}}>
+      <Card bordered={false} style={pipelineMetricsCard}>
         <Empty style={{paddingTop:30}}/>
       </Card>
     )

@@ -23,19 +23,18 @@ function MainHeader() {
 
 
   return (
-    <Flex gap="middle" style={{widht: "100%", height: "3rem"}} align='center' justify='space-between'>
-      <Col style={{paddingTop: "0.5rem"}}>
+    <Flex gap="middle" align='center' justify='space-between'>
+      <Col>
         <RouterLink to="/">
           <img
               width={40}
-              height={20}
-              src= {logo}
+              src={logo}
             />
         </RouterLink>
         
       </Col>
       <Flex gap="middle">
-        <Col >
+        <Col>
           <Popover content={notification} title="New Notification">
               <Badge count={0} offset={[5,2]}>
                 <Avatar icon={<BellOutlined />}/>

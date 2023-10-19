@@ -9,7 +9,7 @@ function App() {
 
   return (
     <ThemeProvider>
-      <ScrollToTop/>
+      {/* <ScrollToTop/> */}
       <Router/>
     </ThemeProvider>
     
