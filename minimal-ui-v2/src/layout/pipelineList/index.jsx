@@ -1,24 +1,14 @@
-import { Typography, Space, Button, Input, Modal, Form } from 'antd'
-import PipelineInfoTable from '../../component/PipelineList/PipelineInfoTable'
 import { SearchOutlined } from '@ant-design/icons'
 import { Icon } from '@iconify/react'
+import { Button, Flex, Form, Input, Modal, Space, Typography } from 'antd'
+import propTypes from "prop-types"
 import { useState } from 'react'
-import propTypes from "prop-types";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom'
 import { backendApi } from '../../api/api'
 import { pipelineStore } from '../../appState/pipelineStore'
-
+import PipelineInfoTable from '../../component/PipelineList/PipelineInfoTable'
 
 const { Title } = Typography
-
-const subBarStyle = {
-    width: '100%',
-    color: "#fff",
-    display: 'flex',
-    alignItems: 'center',
-    paddingLeft: "24px",
-    height: "40px"
-}
 
 NewPipelineForm.propTypes = {
   closeModal: propTypes.func
@@ -138,33 +128,32 @@ function PipelineList() {
   }
 
   return (
-    <div>
-      <div style={subBarStyle}>
-        <Title level={3} style={{color:"white"}}>All Pipelines</Title>
-      </div>
-      <Space direction='vertical' style={{width:"100%", paddingLeft:"24px", paddingTop:"10px"}}>
-        <Space size={"large"}>
-            <Button icon={<Icon icon={"ic:baseline-add"}/>} className='pipelineNew-btn-grad' onClick={showModal}>
-                New Pipeline
-            </Button>
-            <Modal
-              title="Create New Pipeline"
-              open={open}
-              onCancel={() => {setOpen(false)}}
-              width={400}
-              bodyStyle={{paddingTop:20}}
-              footer={<></>}
-            >
-              <Space direction='vertical'>
-                <NewPipelineForm closeModal={setOpen}/>
-              </Space>
-            </Modal>
-            <Input placeholder='Search' prefix={<SearchOutlined/>} id={"pipeline-search"}
-            onChange={(e) => {search(e)} } value={searchPipeline}/>
-        </Space>
-        <PipelineInfoTable searchItem={searchPipeline}/>
-      </Space>
-    </div>
+    <Flex vertical style={{height: "100vh"}}>
+
+      <Title level={3} style={{color:"white"}}>All Pipelines</Title>
+
+      <Flex gap={"large"} align='center'>
+        <Button icon={<Icon icon={"ic:baseline-add"}/>} className='pipelineNew-btn-grad' onClick={showModal}>
+          New Pipeline
+        </Button>
+        <Modal
+          title="Create New Pipeline"
+          open={open}
+          onCancel={() => {setOpen(false)}}
+          width={400}
+          styles={{"body" : {paddingTop:20}}}
+          footer={<></>}
+        >
+          <Flex vertical>
+            <NewPipelineForm closeModal={setOpen}/>
+          </Flex>
+        </Modal>
+        <Input placeholder='Search' prefix={<SearchOutlined/>} id={"pipeline-search"}
+             onChange={(e) => {search(e)} } value={searchPipeline} style={{width:"12rem", height: "2.5rem"}}/>
+      </Flex>
+
+      <PipelineInfoTable searchItem={searchPipeline}/>      
+    </Flex>
   )
 }
 

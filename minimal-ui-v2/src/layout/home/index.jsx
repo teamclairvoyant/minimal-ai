@@ -1,4 +1,4 @@
-import { Breadcrumb, Layout, Menu, theme  } from 'antd';
+import { Layout } from 'antd';
 import { Outlet } from "react-router-dom";
 import MainHeader from '../../component/MainHeader';
 import MainSider from '../../component/MainSider';
@@ -7,8 +7,10 @@ const { Header,Content, Sider } = Layout;
 
 const siderStyle = {
     backgroundColor: '#141414',
-    top: 0,
-    left: 0,
+    overflow: 'auto',
+        height: '100vh',
+        position: 'fixed',
+        left: 0,
 }
 
 const contentStyle = {
@@ -37,7 +39,7 @@ function Home() {
             <Header style={headerStyle}>
                 <MainHeader/>
             </Header>
-            <Layout>
+            <Layout style={{paddingLeft: "4rem"}}>
                 <Sider width={"4rem"} style={siderStyle}>
                     <MainSider/>
                 </Sider>

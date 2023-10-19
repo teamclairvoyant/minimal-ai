@@ -1,7 +1,7 @@
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
-import { Doughnut } from 'react-chartjs-2';
-import {Card, Empty} from "antd"
+import { Card, Empty } from "antd";
+import { ArcElement, Chart as ChartJS, Legend, Tooltip } from 'chart.js';
 import propTypes from "prop-types";
+import { Doughnut } from 'react-chartjs-2';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -9,9 +9,7 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 const pipelineMetricsCard = {
     boxShadow: "rgb(23 78 87) 0px 1px 2px 0px, rgb(248 248 248 / 53%) 0px 1px 6px -1px, rgb(8 8 8) 0px 2px 4px 0px",
     width: "30%",
-    height: "15rem",
-    marginLeft: "24px",
-    marginTop: "30px",
+    height: "17rem",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -24,19 +22,19 @@ PipelineMetricsChart.propTypes = {
 }
 
 export default function PipelineMetricsChart({completed, cancelled, failed}) {
-  // if (completed == 0 & cancelled == 0 & failed == 0){
-  //   return (
-  //     <Card bordered={false} style={pipelineMetricsCard} bodyStyle={{height:300,width:300}}>
-  //       <Empty style={{paddingTop:30}}/>
-  //     </Card>
-  //   )
-  // }
+  if (completed == 0 & cancelled == 0 & failed == 0){
+    return (
+      <Card bordered={false} style={pipelineMetricsCard} bodyStyle={{height:300,width:300}}>
+        <Empty style={{paddingTop:30}}/>
+      </Card>
+    )
+  }
   const data = {
     labels: ['Successful Runs', 'Failed', 'Cancelled'],
     datasets: [
       {
         label: '',
-        data: [7, 2, 3],
+        data: [completed, cancelled, failed],
         backgroundColor: [
           'rgba(75, 192, 192, 0.2)',
           'rgba(255, 99, 132, 0.2)',

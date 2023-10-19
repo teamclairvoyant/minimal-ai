@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Space, Table } from 'antd';
-import { backendApi } from '../../api/api';
-import propTypes from "prop-types";
-import { filter } from "lodash";
 import { Icon } from '@iconify/react';
+import { Flex, Table } from 'antd';
+import { filter } from "lodash";
+import propTypes from "prop-types";
+import { useEffect, useState } from 'react';
+import { backendApi } from '../../api/api';
 
 
 const columns = [
@@ -65,10 +65,10 @@ const columns = [
     width: 100,
     fixed: 'right',
     render: () => (
-      <Space size={"large"}>
+      <Flex gap={"large"}>
         <Icon icon="icon-park-outline:upload-logs" width={20} height={20} className='tableAction-logs-icon'/>
         <Icon icon="carbon:play-outline" width={20} height={20} className='tableAction-execute-icon' />
-      </Space>
+      </Flex>
     ),
   },
 ]
@@ -122,20 +122,20 @@ const PipelineInfoTable = ({searchItem}) => {
   const filterPipelines = applyFilter(pipelines,searchItem)
 
   return (
-    <Space direction="vertical" style={{width: '100%'}}>
+    <Flex vertical style={{paddingTop: "1rem"}}>
       <Table
         bordered={true}
         virtual
         columns={columns}
         scroll={{
           x: 2000,
-          y: 400,
+          y: "auto"
         }}
         rowKey="uuid"
         dataSource={empty ? [] : filterPipelines}
         pagination={false}
       />
-    </Space>
+    </Flex>
   );
 }
 

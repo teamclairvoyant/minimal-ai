@@ -3,12 +3,8 @@ import { Menu } from 'antd';
 import { useNavigate } from 'react-router-dom';
 
 const siderStyle = {
-    backgroundColor:"inherit",
     border:0,
-    height: "100%",
-    display: "flex",
-    flexDirection: "column",
-    paddingTop: 40
+    paddingTop: "1rem"
 }
 
 function WorkbookSider() {
@@ -43,7 +39,7 @@ function WorkbookSider() {
             id: "dashboard",
             icon: <Icon icon="carbon:dashboard" color="white" height={30} width={30} />,
             style: {
-                paddingLeft:10
+                paddingLeft:"0.8rem"
             }
         },
         {
@@ -51,7 +47,7 @@ function WorkbookSider() {
             id: "edit",
             icon: <Icon icon="ant-design:edit-outlined" color="white" height={30} width={30} />,
             style: {
-                paddingLeft:10
+                paddingLeft:"0.8rem"
             }
         },
         {
@@ -59,7 +55,7 @@ function WorkbookSider() {
             id: "triggers",
             icon: <Icon icon="fluent-mdl2:trigger-auto" color="white" height={30} width={30} />,
             style: {
-                paddingLeft:10
+                paddingLeft:"0.8rem"
             }
         },
         {
@@ -67,7 +63,7 @@ function WorkbookSider() {
             id: "schedules",
             icon: <Icon icon="carbon:event-schedule" color="white" height={30} width={30} />,
             style: {
-                paddingLeft:10
+                paddingLeft:"0.8rem"
             }
         },
         {
@@ -75,7 +71,7 @@ function WorkbookSider() {
             id: "settings",
             icon: <Icon icon="fluent:settings-20-regular" color="white" height={30} width={30} />,
             style: {
-                paddingLeft:10
+                paddingLeft:"0.8rem"
             }
         }
     ]

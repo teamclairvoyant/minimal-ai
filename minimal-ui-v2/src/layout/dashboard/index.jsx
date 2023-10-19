@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react"
+import { Card, Flex, Skeleton, Typography } from "antd";
+import { useEffect, useState } from "react";
 import { backendApi } from "../../api/api";
-import { Typography,Skeleton, Row, Card, Flex } from "antd"
-import PipelineMetricsChart from "../../component/Dashboard/PipelineMetricsChart";
 import PipelineMetricsCard from "../../component/Dashboard/PipelineMetricsCard";
+import PipelineMetricsChart from "../../component/Dashboard/PipelineMetricsChart";
 
 const { Title } = Typography
 
@@ -13,9 +13,8 @@ const subBarStyle = {
 const pipelineMetricsBox = {
   boxShadow: "rgb(23 78 87) 0px 1px 2px 0px, rgb(248 248 248 / 53%) 0px 1px 6px -1px, rgb(8 8 8) 0px 2px 4px 0px",
   marginLeft: "1rem",
-  marginTop: "30px",
-  height: "15rem",
-  width: "30rem"
+  height: "17rem",
+  width: "100%"
 }
 
 const monthNames = ["January", "February", "March", "April", "May", "June",
@@ -46,11 +45,12 @@ function Dashboard() {
       </Flex>
       
       <PipelineMetricsCard summary={summary} />
-      <Row style={{flexWrap: "nowrap"}}>
+      
+      <Flex style={{paddingTop: "1rem"}}>
         <PipelineMetricsChart completed={summary.execution_details.COMPLETED} failed={summary.execution_details.FAILED}
         cancelled={summary.execution_details.CANCELLED}/>
         <Card style={pipelineMetricsBox}><Skeleton></Skeleton></Card>
-      </Row>
+      </Flex>
 
     </Flex>
   )
