@@ -7,13 +7,16 @@ from minimal_ai.app.services.database import CTX_SESSION, create_session
 from minimal_ai.app.services.pipeline_scheduler import schedule_pipeline
 from minimal_ai.app.utils import TaskType
 
+
 logger = logging.getLogger(__name__)
 
 
 class PipelineService:
 
     @staticmethod
-    async def create_pipeline(name: str, executor_config: Dict[str, str] | None, description: str | None) -> Dict:
+    async def create_pipeline(name: str, executor_type: str, 
+                              executor_config: Dict[str, str] | None, 
+                              description: str | None) -> Dict:
         """method to create the pipeline
 
         Args:
@@ -24,12 +27,12 @@ class PipelineService:
         Returns:
             Dict: created pipeline object
         """
-        pipeline = Pipeline.create(name, executor_config, description)
+        pipeline = Pipeline.create(name, executor_type, executor_config, description)
         logger.info("Pipeline - %s created", name)
         return await pipeline.pipeline_summary()
 
     @staticmethod
-    async def update_pipeline(pipeline_uuid: str, reactflow_props: Dict[Any, Any]) -> Dict:
+    async def update_pipeline(pipeline_uuid: str, pipeline_config) -> Dict:
         """method to update existing pipeline
 
         Args:
@@ -41,8 +44,7 @@ class PipelineService:
         """
         pipeline = await Pipeline.get_pipeline_async(pipeline_uuid)
         logger.info("Pipeline - %s fetched", pipeline_uuid)
-        pipeline.add_reactflow_props(reactflow_props)
-
+        pipeline.update(pipeline_config)
         return await pipeline.pipeline_summary()
 
     @staticmethod

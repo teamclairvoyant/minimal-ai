@@ -18,8 +18,9 @@ from minimal_ai.app.models.task import Task
 from minimal_ai.app.models.variable import VariableManager
 from minimal_ai.app.services.minimal_exception import MinimalETLException
 from minimal_ai.app.services.spark_main import SparkMain
-from minimal_ai.app.utils.constants import PipelineStatus
+from minimal_ai.app.utils.constants import PipelineStatus, ExecutorType, PipelineUpdateModel
 from minimal_ai.app.utils.string_utils import clean_name, format_enum
+
 
 METADATA_FILE = 'metadata.json'
 VARIABLE_DIR = '.variable'
@@ -33,6 +34,7 @@ class Pipeline:
     description: str | None = None
     tasks: Dict[Any, Any] = Field(default={})
     executor_config: Dict[Any, Any] = Field(default={})
+    executor_type: ExecutorType = ExecutorType.PYTHON
     config: Dict | None = None
     scheduled: bool = False
     status: PipelineStatus = PipelineStatus.DRAFT
@@ -98,6 +100,7 @@ class Pipeline:
         self.name = _config.get('name')
         self.uuid = _config.get('uuid')  # type: ignore
         self.description = _config.get('description')
+        self.executor_type = _config.get('executor_type','python')
         self.executor_config = _config.get('executor_config', {})
         self.tasks = _config.get('tasks', {})
         self.status = PipelineStatus(_config.get('status'))
@@ -119,6 +122,7 @@ class Pipeline:
             "name": self.name,
             "uuid": self.uuid,
             "description": self.description,
+            "executor_type": self.executor_type,
             "executor_config": self.executor_config,
             "tasks": self.tasks,
             "status": self.status,
@@ -139,16 +143,16 @@ class Pipeline:
         return base_data
 
     @classmethod
-    def create(cls, name: str, executor_config: Dict[str, str] | None = None,
+    def create(cls, name: str, executor_type: str = ExecutorType.PYTHON,
+               executor_config: Dict[str, str] | None = None,
                description: str | None = None) -> 'Pipeline':
         """
         method to create object pipeline class
         Args:
             name (str): name of the pipeline
+            executor_type(str): executor type of the pipeline
             executor_config (Dict): spark config of the pipeline
             description (str): short description for the pipeline
-        Returns:
-
         """
         logger.info("creating pipeline %s", name)
         uuid = clean_name(name)
@@ -164,18 +168,23 @@ class Pipeline:
 
         logger.debug('pipeline dir -> %s', pipeline_path)
         logger.debug('variable dir -> %s', variable_path)
-
-        with open(os.path.join(pipeline_path, METADATA_FILE), 'w') as config_file:
-            json.dump({
-                "name": name,
-                "uuid": uuid,
-                "description": description,
-                "executor_config": executor_config if executor_config else {},
-                "status": format_enum(PipelineStatus.DRAFT),
-                "scheduled": False,
-                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "created_by": "test user"
-            }, config_file, indent=4)
+        try:
+            with open(os.path.join(pipeline_path, METADATA_FILE), 'w') as config_file:
+                json.dump({
+                    "name": name,
+                    "uuid": uuid,
+                    "description": description,
+                    "executor_type": ExecutorType(executor_type),
+                    "executor_config": executor_config if executor_config else {},
+                    "status": format_enum(PipelineStatus.DRAFT),
+                    "scheduled": False,
+                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "created_by": "test user"
+                }, config_file, indent=4)
+        except Exception as excep:
+            shutil.rmtree(pipeline_path)
+            logger.error("Failed to save metadata.json for pipeline - %s | %s",name,excep.args)
+            raise MinimalETLException(f"Failed to save metadata.json for pipeline - {name} | {excep.args}")
 
         pipeline = Pipeline(uuid=uuid)
 
@@ -326,18 +335,18 @@ class Pipeline:
 
         return task_uuid in self.tasks
 
-    def add_reactflow_props(self, reactflow_props: Dict[Any, Any]) -> None:
-        """method to reactflow props to pipeline object
+    # def add_reactflow_props(self, reactflow_props: Dict[Any, Any]) -> None:
+    #     """method to reactflow props to pipeline object
 
-        Args:
-            reactflow_props (Dict[Any,Any]): reactflow props object
-        """
-        logger.info("Adding reactflow props to pipeline - %s object", self.uuid)
-        if self.reactflow_props:
-            self.reactflow_props.clear()
+    #     Args:
+    #         reactflow_props (Dict[Any,Any]): reactflow props object
+    #     """
+    #     logger.info("Adding reactflow props to pipeline - %s object", self.uuid)
+    #     if self.reactflow_props:
+    #         self.reactflow_props.clear()
 
-        self.reactflow_props.update(reactflow_props)  # type:ignore
-        self.save()
+    #     self.reactflow_props.update(reactflow_props)  # type:ignore
+
 
     def add_task(self, task, priority=None) -> None:
         """ method to attach task to pipeline
@@ -372,6 +381,34 @@ class Pipeline:
         except Exception as excep:
             raise MinimalETLException(
                 f'Pipeline - {self.uuid} failed to save | {excep.args}')
+
+    def update(self, pipeline_config: PipelineUpdateModel) -> Dict[Any,Any]:
+        """method to update the pipeline
+
+        Args:
+            pipeline_config (PipelineUpdateModel): properties to be updated
+
+        Returns:
+            Dict[Any,Any]: updated pipeline object
+        """
+        try:
+            logger.info("Updating pipeline - %s", self.name)
+            if pipeline_config.executor_config is not None:
+                self.executor_config.clear()
+                self.executor_config.update(pipeline_config.executor_config)
+
+            if pipeline_config.executor_type is not None:
+                self.executor_type = ExecutorType(pipeline_config.executor_type)
+
+            if pipeline_config.reactflow_props is not None:
+                self.reactflow_props.clear()
+                self.reactflow_props.update(pipeline_config.reactflow_props)
+
+            self.save()
+            return self.pipeline_summary()
+        except Exception as excep:
+            logger.error("Failed to update Pipeline - %s | %s", self.name, excep.args)
+            raise MinimalETLException(f"Failed to update Pipeline - {self.name} | {excep.args}")
 
     async def execute(self, root_tasks: List) -> None:
         """method to execute the pipeline

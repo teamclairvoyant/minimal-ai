@@ -4,6 +4,12 @@ from typing import Any, Dict, List
 from pydantic import BaseModel
 
 
+class ExecutorType(str, Enum):
+    """Executor type class
+    """
+    PYTHON = 'python'
+    PYSPARK = 'pyspark'
+
 class PipelineStatus(str, Enum):
     """Pipeline status class
     """
@@ -71,6 +77,7 @@ class PipelineModel(BaseModel):
     """ Model class to define pipeline
     """
     name: str
+    executor_type: str
     executor_config: Dict[str, str] | None = None
     description: str | None = None
 
@@ -78,7 +85,9 @@ class PipelineModel(BaseModel):
 class PipelineUpdateModel(BaseModel):
     """Model class for pipeline update
     """
-    reactflow_props: Dict[Any, Any]
+    executor_type: str | None = None
+    reactflow_props: Dict[Any, Any] | None = None
+    executor_config: Dict[Any, Any] | None = None
 
 
 class VariableType(str, Enum):

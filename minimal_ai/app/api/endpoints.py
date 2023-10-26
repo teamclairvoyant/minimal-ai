@@ -223,7 +223,9 @@ async def add_pipeline(pipeline_config: PipelineModel) -> JSONResponse:
     try:
         logger.info("POST /pipeline %s", pipeline_config.name)
         pipeline = await PipelineService.create_pipeline(
-            pipeline_config.name, pipeline_config.executor_config, pipeline_config.description)
+            pipeline_config.name,pipeline_config.executor_type, 
+            pipeline_config.executor_config, pipeline_config.description)
+
         return JSONResponse(status_code=status.HTTP_201_CREATED,
                             content={"pipeline": pipeline})
     except MinimalETLException as excep:
@@ -242,7 +244,7 @@ async def update_pipeline(uuid: str, pipeline_config: PipelineUpdateModel) -> JS
     try:
         logger.info("PUT /pipeline/%s", uuid)
         pipeline = await PipelineService.update_pipeline(
-            uuid, pipeline_config.reactflow_props)
+            uuid, pipeline_config)
         return JSONResponse(status_code=status.HTTP_201_CREATED,
                             content={"pipeline": pipeline})
     except MinimalETLException as excep:
