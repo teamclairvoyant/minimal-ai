@@ -19,7 +19,7 @@ class Task:
     uuid: str
     name: str
     task_type: TaskType
-    status: TaskStatus = TaskStatus.NOT_EXECUTED
+    status: TaskStatus = TaskStatus.DRAFT
     pipeline: Any = None
     upstream_tasks: List[str] = field(default_factory=list)
     downstream_tasks: List[str] = field(default_factory=list)
@@ -38,12 +38,12 @@ class Task:
         return _executed
 
     @classmethod
-    def create(cls,
-               name: str,
-               task_type: str,
-               pipeline=None,
-               priority: int | None = None,
-               upstream_task_uuids=None) -> 'Task':
+    async def create(cls,
+                     name: str,
+                     task_type: str,
+                     pipeline=None,
+                     priority: int | None = None,
+                     upstream_task_uuids=None) -> None:
         """method to add task to a pipeline
 
         Args:
@@ -72,31 +72,30 @@ class Task:
             task_type=TaskType(task_type),
             pipeline=pipeline)  # type: ignore
 
-        task.after_create(
+        await task.after_create(
             pipeline=pipeline,
             priority=priority,
             upstream_task_uuids=upstream_task_uuids,
         )
-        return task
 
-    def after_create(self, **kwargs) -> None:
+    async def after_create(self, **kwargs) -> None:
         """ method to add task to corresponding pipeline
         """
         if kwargs.get('upstream_task_uuids') is not None:
             self.upstream_tasks.extend(kwargs.get(  # type: ignore
                 'upstream_task_uuids'))
-        self.update_upstream_tasks(
+        await self.update_upstream_tasks(
             add_to_task_uuids=kwargs.get('upstream_task_uuids'))
         pipeline = kwargs.get('pipeline')
         if pipeline is not None:
             priority = kwargs.get('priority')
 
-            pipeline.add_task(
+            await pipeline.add_task(
                 self,
                 priority=priority,
             )
 
-    def update_upstream_tasks(self, add_to_task_uuids=None, remove_from_task_uuids=None) -> None:
+    async def update_upstream_tasks(self, add_to_task_uuids=None, remove_from_task_uuids=None) -> None:
         """ method to update the upstream tasks of current task
 
         Args:
@@ -121,6 +120,7 @@ class Task:
                         f'Task - {task_uuid} not defined in pipeline - {self.pipeline.uuid}')
                 self.pipeline.tasks[task_uuid]['downstream_tasks'].append(
                     self.uuid)
+                await self.pipeline.add_edge_reactflow_props(self.uuid, task_uuid)
 
         if remove_from_task_uuids:
             logger.debug(remove_from_task_uuids)

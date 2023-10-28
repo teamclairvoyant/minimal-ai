@@ -21,7 +21,9 @@
     "react-helmet-async": "^1.3.0",
     "react-highlight-words": "^0.20.0",
     "react-router-dom": "^6.16.0",
-    "react-sweet-state": "^2.7.1"
+    "react-sweet-state": "^2.7.1",
+    "reactflow": "^11.9.4",
+    "styled-components": "^6.1.0"
   },
   "devDependencies": {
     "@iconify/react": "^4.1.1",

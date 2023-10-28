@@ -157,7 +157,8 @@ const MainFlow = ({ pipeline, setPipeline }) => {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodeClick={nodeClick}
-        fitView={true}
+        defaultViewport={ {x: 0, y: 0, zoom: 1} }
+        fitView
         fitViewOptions={{
           padding: 1,
           maxZoom: 3

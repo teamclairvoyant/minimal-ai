@@ -7,15 +7,14 @@ from minimal_ai.app.services.database import CTX_SESSION, create_session
 from minimal_ai.app.services.pipeline_scheduler import schedule_pipeline
 from minimal_ai.app.utils import TaskType
 
-
 logger = logging.getLogger(__name__)
 
 
 class PipelineService:
 
     @staticmethod
-    async def create_pipeline(name: str, executor_type: str, 
-                              executor_config: Dict[str, str] | None, 
+    async def create_pipeline(name: str, executor_type: str,
+                              executor_config: Dict[str, str] | None,
                               description: str | None) -> Dict:
         """method to create the pipeline
 
@@ -27,7 +26,8 @@ class PipelineService:
         Returns:
             Dict: created pipeline object
         """
-        pipeline = Pipeline.create(name, executor_type, executor_config, description)
+        pipeline = Pipeline.create(
+            name, executor_type, executor_config, description)
         logger.info("Pipeline - %s created", name)
         return await pipeline.pipeline_summary()
 
@@ -44,7 +44,7 @@ class PipelineService:
         """
         pipeline = await Pipeline.get_pipeline_async(pipeline_uuid)
         logger.info("Pipeline - %s fetched", pipeline_uuid)
-        pipeline.update(pipeline_config)
+        await pipeline.update(pipeline_config)
         return await pipeline.pipeline_summary()
 
     @staticmethod

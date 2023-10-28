@@ -1,13 +1,13 @@
 import { useRoutes } from "react-router-dom";
-import Home from "./layout/home";
-import Dashboard from "./layout/dashboard";
-import WorkBook from "./layout/workbook";
-import PipelineList from "./layout/pipelineList";
 import PipelineDashboard from "./component/Workbook/Dashboard";
 import EditWorkbook from "./component/Workbook/EditWorkbook";
 import PipelineRuns from "./component/Workbook/PipelineRuns";
 import PipelineScheduler from "./component/Workbook/PipelineScheduler";
 import PipelineSettings from "./component/Workbook/PipelineSettings";
+import Dashboard from "./layout/dashboard";
+import Home from "./layout/home";
+import PipelineList from "./layout/pipelineList";
+import WorkBook from "./layout/workbook";
 
 
 export default function Router() {
@@ -43,7 +43,7 @@ export default function Router() {
           element: <PipelineRuns/>
         },
         {
-          path: "/pipeline/:pipelineUUID/scheduler",
+          path: "/pipeline/:pipelineUUID/schedules",
           element: <PipelineScheduler/>
         },
         {

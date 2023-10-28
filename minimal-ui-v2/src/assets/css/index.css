@@ -1,4 +1,18 @@
-body {margin:0;padding:0}
+body {
+  margin:0;
+  padding:0;
+  background-color: #1c1c1c;
+  overflow: hidden;
+}
+
+#root {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  overflow: auto;
+}
 
 ::-webkit-scrollbar {
     width: 4px;
@@ -64,4 +78,74 @@ body {margin:0;padding:0}
 
 #components-form-demo-control-ref .ant-btn {
   margin-right: 8px;
+}
+
+.pipeline-name-div{
+  background: 
+        linear-gradient(#1c1c1c, #1c1c1c) padding-box,
+        linear-gradient(to right, #fe8c00 0%, #f83600  51%, #fe8c00  100%) border-box;
+  color: white;
+  border: 2px solid transparent;
+  pointer-events: none;
+  font-weight: 300;
+}
+
+.react-flow__node-draftNode {
+  display: flex;
+  height: 70px;
+  width: Auto;
+  font-family: 'Fira Mono', Monospace;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  font-size: 10px;
+  background: #eee;
+  border: 5px solid #858585;
+  border-radius: 15px;
+  text-align: center;
+  box-shadow: 5px 0 15px #858585, -5px 0 15px #858585;
+}
+
+.react-flow__node-configuredNode {
+  display: flex;
+  height: 70px;
+  width: Auto;
+  font-family: 'Fira Mono', Monospace;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  font-size: 10px;
+  background: #eee;
+  border: 5px solid #c7c748;
+  border-radius: 15px;
+  text-align: center;
+  box-shadow: 5px 0 15px #c7c748, -5px 0 15px #c7c748;
+}
+
+.react-flow__node-successNode {
+  display: flex;
+  height: 70px;
+  width: Auto;
+  font-family: 'Fira Mono', Monospace;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  font-size: 10px;
+  background: #eee;
+  border: 5px solid #60a364;
+  border-radius: 15px;
+  text-align: center;
+  box-shadow: 5px 0 15px #60a364, -5px 0 15px #60a364;
+}
+
+.react-flow__node-failNode {
+  display: flex;
+  height: 70px;
+  width: Auto;
+  font-family: 'Fira Mono', Monospace;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  font-size: 10px;
+  background: #eee;
+  border: 5px solid #a36060;
+  border-radius: 15px;
+  text-align: center;
+  box-shadow: 5px 0 15px #a36060, -5px 0 15px #a36060;
 }

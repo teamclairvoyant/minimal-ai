@@ -1,17 +1,41 @@
 import { Icon } from '@iconify/react';
 import { Menu } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+
 
 const siderStyle = {
     border:0,
-    paddingTop: "1rem"
+    backgroundColor: "#1c1c1c",
+    
 }
 
 function WorkbookSider() {
+    const [selectedMenuKey, setSelectedMenuKey] = useState(["1"])
+    const location = useLocation()
     const navigate = useNavigate()
 
-    function navigateWorkbook(e) {
+    useEffect(() => {
+        const pathname = location.pathname.split("/").pop()
 
+        if (pathname === "dashboard") {
+            setSelectedMenuKey(["1"])
+        } else if (pathname === "edit") {
+            setSelectedMenuKey(["2"])
+        }
+        else if (pathname === "runs") {
+        setSelectedMenuKey(["3"])
+        }
+        else if (pathname === "scheduler") {
+        setSelectedMenuKey(["4"])
+        }
+        else {
+            setSelectedMenuKey(["5"])
+        }
+    }, [location])
+
+    function navigateWorkbook(e) {
+        setSelectedMenuKey(e.key)
         if (e.key == 1){
             navigate("dashboard")
         }
@@ -22,7 +46,7 @@ function WorkbookSider() {
             navigate("runs")
         }
         else if(e.key == 4){
-            navigate("scheduler")
+            navigate("schedules")
         }
         else if(e.key == 5){
             navigate("settings")
@@ -36,50 +60,59 @@ function WorkbookSider() {
     const items = [
         {
             key: "1",
-            id: "dashboard",
-            icon: <Icon icon="carbon:dashboard" color="white" height={30} width={30} />,
+            label: "dashboard",
+            icon: <Icon icon="carbon:dashboard" color="white" />,
             style: {
-                paddingLeft:"0.8rem"
+                border: "solid #2d2d2d 1px"
             }
         },
         {
             key: "2",
-            id: "edit",
-            icon: <Icon icon="ant-design:edit-outlined" color="white" height={30} width={30} />,
+            label: "edit",
+            icon: <Icon icon="ant-design:edit-outlined" color="white" />,
             style: {
-                paddingLeft:"0.8rem"
+                border: "solid #2d2d2d 1px",
+                marginTop: "1rem"
             }
         },
         {
             key: "3",
-            id: "triggers",
-            icon: <Icon icon="fluent-mdl2:trigger-auto" color="white" height={30} width={30} />,
+            label: "runs",
+            icon: <Icon icon="fluent-mdl2:trigger-auto" color="white" />,
             style: {
-                paddingLeft:"0.8rem"
+                border: "solid #2d2d2d 1px",
+                marginTop: "1rem"
             }
         },
         {
             key: "4",
-            id: "schedules",
-            icon: <Icon icon="carbon:event-schedule" color="white" height={30} width={30} />,
+            label: "schedules",
+            icon: <Icon icon="carbon:event-schedule" color="white" />,
             style: {
-                paddingLeft:"0.8rem"
+                border: "solid #2d2d2d 1px",
+                marginTop: "1rem"
             }
         },
         {
             key: "5",
-            id: "settings",
-            icon: <Icon icon="fluent:settings-20-regular" color="white" height={30} width={30} />,
+            label: "settings",
+            icon: <Icon icon="fluent:settings-20-regular" color="white" />,
             style: {
-                paddingLeft:"0.8rem"
+                border: "solid #2d2d2d 1px",
+                marginTop: "1rem"
             }
         }
     ]
     
   return (
-    <div>
-      <Menu mode="inline" defaultSelectedKeys={["2"]} items={items} style={siderStyle} onClick={(e) => {navigateWorkbook(e)}}/>
-    </div>
+      <Menu 
+        mode="inline" 
+        defaultSelectedKeys={["2"]}
+        selectedKeys={selectedMenuKey}
+        items={items}
+        style={siderStyle}
+        onClick={(e) => {navigateWorkbook(e)}}
+      />
   )
 }
 

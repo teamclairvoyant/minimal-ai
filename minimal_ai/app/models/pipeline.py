@@ -1,7 +1,9 @@
 import asyncio
 import json
 import logging
+import math
 import os
+import random
 import shutil
 from datetime import datetime
 from queue import Queue
@@ -18,9 +20,10 @@ from minimal_ai.app.models.task import Task
 from minimal_ai.app.models.variable import VariableManager
 from minimal_ai.app.services.minimal_exception import MinimalETLException
 from minimal_ai.app.services.spark_main import SparkMain
-from minimal_ai.app.utils.constants import PipelineStatus, ExecutorType, PipelineUpdateModel
+from minimal_ai.app.utils.constants import (ICONSET, ExecutorType,
+                                            PipelineStatus,
+                                            PipelineUpdateModel)
 from minimal_ai.app.utils.string_utils import clean_name, format_enum
-
 
 METADATA_FILE = 'metadata.json'
 VARIABLE_DIR = '.variable'
@@ -100,7 +103,7 @@ class Pipeline:
         self.name = _config.get('name')
         self.uuid = _config.get('uuid')  # type: ignore
         self.description = _config.get('description')
-        self.executor_type = _config.get('executor_type','python')
+        self.executor_type = _config.get('executor_type', 'python')
         self.executor_config = _config.get('executor_config', {})
         self.tasks = _config.get('tasks', {})
         self.status = PipelineStatus(_config.get('status'))
@@ -179,12 +182,23 @@ class Pipeline:
                     "status": format_enum(PipelineStatus.DRAFT),
                     "scheduled": False,
                     "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "created_by": "test user"
+                    "created_by": "test user",
+                    "reactflow_props": {
+                        "nodes": [],
+                        "edges": [],
+                        "viewport": {
+                            "x": 500,
+                            "y": 50,
+                            "zoom": 1
+                        }
+                    }
                 }, config_file, indent=4)
         except Exception as excep:
             shutil.rmtree(pipeline_path)
-            logger.error("Failed to save metadata.json for pipeline - %s | %s",name,excep.args)
-            raise MinimalETLException(f"Failed to save metadata.json for pipeline - {name} | {excep.args}")
+            logger.error(
+                "Failed to save metadata.json for pipeline - %s | %s", name, excep.args)
+            raise MinimalETLException(
+                f"Failed to save metadata.json for pipeline - {name} | {excep.args}")
 
         pipeline = Pipeline(uuid=uuid)
 
@@ -335,20 +349,67 @@ class Pipeline:
 
         return task_uuid in self.tasks
 
-    # def add_reactflow_props(self, reactflow_props: Dict[Any, Any]) -> None:
-    #     """method to reactflow props to pipeline object
+    async def add_edge_reactflow_props(self, target: str, source: str) -> None:
+        """method to add edge to reactflow props of pipeline object
+        """
+        logger.info("Adding edge and updating task dependency")
 
-    #     Args:
-    #         reactflow_props (Dict[Any,Any]): reactflow props object
-    #     """
-    #     logger.info("Adding reactflow props to pipeline - %s object", self.uuid)
-    #     if self.reactflow_props:
-    #         self.reactflow_props.clear()
+        EDGE = {
+            "animated": True,
+            "markerEnd": {
+                "type": "arrowclosed"
+            },
+            "source": "",
+            "sourceHandle": None,
+            "target": "",
+            "targetHandle": None,
+            "id": "reactflow__edge-grgrg-rgrehre"
+        }
 
-    #     self.reactflow_props.update(reactflow_props)  # type:ignore
+        EDGE['source'] = source
+        EDGE['target'] = target
+        EDGE['id'] = f"reactflow__edge-{source}-{target}"
 
+        self.reactflow_props['edges'].append(EDGE)
 
-    def add_task(self, task, priority=None) -> None:
+    async def add_node_reactflow_props(self, task_uuid, task_type) -> None:
+        """method to add node to reactflow props of pipeline object
+
+        Args:
+            reactflow_props (Dict[Any,Any]): reactflow props object
+        """
+        logger.info("Adding reactflow props to pipeline - %s object", self.uuid)
+
+        NODE = {
+            "width": 124,
+            "height": 70,
+            "id": "",
+            "sourcePosition": "right",
+            "targetPosition": "left",
+            "data": {
+                "title": "",
+                "icon": "",
+                "type": ""
+            },
+            "type": "draftNode",
+            "position": {
+                    "x": math.floor(random.random() * 100),
+                    "y": math.floor(random.random() * 100)
+            },
+            "positionAbsolute": {
+                "x": math.floor(random.random() * 100),
+                "y": math.floor(random.random() * 100)
+            }
+        }
+
+        NODE['id'] = task_uuid
+        NODE['data']['title'] = task_uuid
+        NODE['data']['icon'] = ICONSET[task_type]
+        NODE['data']['type'] = task_type
+
+        self.reactflow_props['nodes'].append(NODE)
+
+    async def add_task(self, task, priority=None) -> None:
         """ method to attach task to pipeline
 
         Args:
@@ -363,6 +424,8 @@ class Pipeline:
             task_list = list(self.tasks.items())
             task_list.insert(priority - 1, (task.uuid, task.base_dict_obj()))
             self.tasks = dict(task_list)
+
+        await self.add_node_reactflow_props(task.uuid, task.task_type)
         logger.info('Added task - %s to the pipeline', task.uuid)
         # self.validate('A cycle was formed while adding a task')
 
@@ -382,7 +445,7 @@ class Pipeline:
             raise MinimalETLException(
                 f'Pipeline - {self.uuid} failed to save | {excep.args}')
 
-    def update(self, pipeline_config: PipelineUpdateModel) -> Dict[Any,Any]:
+    async def update(self, pipeline_config: PipelineUpdateModel) -> None:
         """method to update the pipeline
 
         Args:
@@ -398,17 +461,20 @@ class Pipeline:
                 self.executor_config.update(pipeline_config.executor_config)
 
             if pipeline_config.executor_type is not None:
-                self.executor_type = ExecutorType(pipeline_config.executor_type)
+                self.executor_type = ExecutorType(
+                    pipeline_config.executor_type)
 
             if pipeline_config.reactflow_props is not None:
                 self.reactflow_props.clear()
                 self.reactflow_props.update(pipeline_config.reactflow_props)
 
             self.save()
-            return self.pipeline_summary()
+
         except Exception as excep:
-            logger.error("Failed to update Pipeline - %s | %s", self.name, excep.args)
-            raise MinimalETLException(f"Failed to update Pipeline - {self.name} | {excep.args}")
+            logger.error("Failed to update Pipeline - %s | %s",
+                         self.name, excep.args)
+            raise MinimalETLException(
+                f"Failed to update Pipeline - {self.name} | {excep.args}")
 
     async def execute(self, root_tasks: List) -> None:
         """method to execute the pipeline
@@ -430,7 +496,7 @@ class Pipeline:
                 raise MinimalETLException(
                     f"Execution failed for pipeline {self.uuid} - no tasks have been configured")
 
-            spark, spark_config = SparkMain(
+            spark, _ = SparkMain(
                 self.uuid, self.executor_config).start_spark()
             task_queue = Queue()
             executed_tasks = {}
@@ -498,7 +564,7 @@ class Pipeline:
                                             "execution_date": datetime.now(),
                                             "status": "RUNNING"})
 
-            spark, spark_config = SparkMain(
+            spark, _ = SparkMain(
                 self.uuid, self.executor_config).start_spark()
             task_queue = Queue()
             executed_tasks = {}

@@ -1,7 +1,15 @@
+import math
+import random
 from enum import Enum
 from typing import Any, Dict, List
 
 from pydantic import BaseModel
+
+ICONSET = {
+    "data_loader": "ph:cloud",
+    "data_transformer": "tabler:transform",
+    "data_sink": "material-symbols:download"
+}
 
 
 class ExecutorType(str, Enum):
@@ -9,6 +17,7 @@ class ExecutorType(str, Enum):
     """
     PYTHON = 'python'
     PYSPARK = 'pyspark'
+
 
 class PipelineStatus(str, Enum):
     """Pipeline status class
@@ -32,7 +41,7 @@ class TaskStatus(str, Enum):
     """
     EXECUTED = 'executed'
     FAILED = 'failed'
-    NOT_EXECUTED = 'not_executed'
+    DRAFT = 'draft'
     UPDATED = 'updated'
 
 
@@ -190,3 +199,10 @@ class BigQueryConfig(BaseModel):
     """
     table: str
     mode: str | None = None
+
+
+class ReactflowProps(BaseModel):
+    """ properties for reactflow"""
+    nodes: list[dict]
+    edges: list[dict]
+    viewport: dict

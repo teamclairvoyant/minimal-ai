@@ -2,35 +2,42 @@ import { Layout } from 'antd';
 import { Outlet } from "react-router-dom";
 import MainHeader from '../../component/MainHeader';
 import MainSider from '../../component/MainSider';
-import { useState } from 'react';
 
 const { Header,Content, Sider } = Layout;
 
 const headerStyle = {
-    backgroundColor: '#141414',
+    backgroundColor: '#1c1c1c',
     position: "sticky",
     top: 0,
     zIndex: 1,
-    paddingLeft: "1.5rem"
+    padding: "0 1rem 0 1rem",
+    borderBottom: "solid black 1px"
 }
-  
+
+const siderStyle = {
+    backgroundColor: '#1c1c1c',
+    overflow: 'auto',
+    height: '100vh',
+    position: 'fixed',
+    width: "4rem",
+    paddingTop: "1rem",
+    borderRight: "solid black 1px"
+}
 
 function Home() {
-    const [collapsed, setCollapsed] = useState(true);
 
     return (
         <Layout>
             <Header style={headerStyle}>
                 <MainHeader/>
             </Header>
-            <Layout style={{ minHeight: `calc(100vh - 64px)`}}>
-                <Sider collapsed={collapsed} 
-                    onMouseEnter={() => setCollapsed(false)} 
-                    onMouseLeave={() => setCollapsed(true)} 
-                    style={{backgroundColor: "#141414"}}>
+            <Layout>
+                <Sider collapsed
+                    style={siderStyle}
+                    collapsedWidth={60}>
                     <MainSider />
                 </Sider>
-                <Layout style={{padding: "0 2rem 2rem 2rem"}}>
+                <Layout style={{padding: "0 1rem 2rem 5rem", backgroundColor: "#1c1c1c"}}>
                     <Content>
                         <Outlet/>
                     </Content>

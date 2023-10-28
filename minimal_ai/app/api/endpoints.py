@@ -223,7 +223,7 @@ async def add_pipeline(pipeline_config: PipelineModel) -> JSONResponse:
     try:
         logger.info("POST /pipeline %s", pipeline_config.name)
         pipeline = await PipelineService.create_pipeline(
-            pipeline_config.name,pipeline_config.executor_type, 
+            pipeline_config.name, pipeline_config.executor_type,
             pipeline_config.executor_config, pipeline_config.description)
 
         return JSONResponse(status_code=status.HTTP_201_CREATED,

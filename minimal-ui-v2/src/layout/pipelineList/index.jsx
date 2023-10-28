@@ -5,7 +5,6 @@ import propTypes from "prop-types"
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { backendApi } from '../../api/api'
-import { pipelineStore } from '../../appState/pipelineStore'
 import PipelineInfoTable from '../../component/PipelineList/PipelineInfoTable'
 
 const { Title } = Typography
@@ -17,7 +16,6 @@ NewPipelineForm.propTypes = {
 function NewPipelineForm({closeModal}) {
   const [form] = Form.useForm()
   const navigate = useNavigate()
-  const [, { setPipeline }] = pipelineStore()
 
   const onFinishFailed = (errorInfo) => {
     console.log('Failed:', errorInfo)
@@ -25,13 +23,14 @@ function NewPipelineForm({closeModal}) {
 
   async function createPipeline(values) {
     try{
+
       const response = await backendApi.post("/pipeline", {
         "name": values.name,
-        "description": values.description
+        "description": values.description,
+        "executor_type": "python"
       })
 
       if (response.data.pipeline) {
-        setPipeline(response.data.pipeline)
         navigate(`/pipeline/${response.data.pipeline.uuid}/edit`)
       }
     }
@@ -128,7 +127,7 @@ function PipelineList() {
   }
 
   return (
-    <Flex vertical style={{height: "100vh"}}>
+    <Flex vertical>
 
       <Title level={3} style={{color:"white"}}>All Pipelines</Title>
 

@@ -45,7 +45,7 @@ function Dashboard() {
       </Flex>
 
       <PipelineMetricsCard summary={summary} />
-      <PipelineMetricsCard summary={summary} />
+
       <Flex style={{ paddingTop: "1rem" }}>
         <PipelineMetricsChart completed={summary.execution_details.COMPLETED} failed={summary.execution_details.FAILED}
           cancelled={summary.execution_details.CANCELLED} />

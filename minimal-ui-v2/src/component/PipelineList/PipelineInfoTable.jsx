@@ -122,20 +122,20 @@ const PipelineInfoTable = ({searchItem}) => {
   const filterPipelines = applyFilter(pipelines,searchItem)
 
   return (
-    <Flex vertical style={{paddingTop: "1rem"}}>
+
       <Table
         bordered={true}
         virtual
         columns={columns}
         scroll={{
           x: 2000,
-          y: "auto"
+          y: 450
         }}
         rowKey="uuid"
         dataSource={empty ? [] : filterPipelines}
         pagination={false}
+        style={{marginTop: "1rem"}}
       />
-    </Flex>
   );
 }
 

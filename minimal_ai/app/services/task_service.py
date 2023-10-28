@@ -26,11 +26,11 @@ class TaskService:
         """
         pipeline = await Pipeline.get_pipeline_async(pipeline_uuid)
         logger.info('Pipeline - %s', pipeline.uuid)
-        Task.create(task_config.name,
-                    task_config.task_type,
-                    pipeline=pipeline,
-                    priority=task_config.priority,
-                    upstream_task_uuids=task_config.upstream_task_uuids)
+        await Task.create(task_config.name,
+                          task_config.task_type,
+                          pipeline=pipeline,
+                          priority=task_config.priority,
+                          upstream_task_uuids=task_config.upstream_task_uuids)
 
         return await pipeline.pipeline_summary()
 
@@ -165,11 +165,11 @@ class TaskService:
                     'Updating upstream tasks for the task - %s', task_uuid)
                 if task_config.upstream_task_uuids:
                     task.upstream_tasks.extend(task_config.upstream_task_uuids)
-                    task.update_upstream_tasks(task_config.upstream_task_uuids)
+                    await task.update_upstream_tasks(task_config.upstream_task_uuids)
                 else:
                     current_upstream_task_uuids = task.upstream_tasks
                     task.upstream_tasks = []
-                    task.update_upstream_tasks(
+                    await task.update_upstream_tasks(
                         remove_from_task_uuids=current_upstream_task_uuids)
 
             if task_config.config_type is not None or task_config.config_properties is not None:
@@ -182,8 +182,8 @@ class TaskService:
             task_config = {'file_type': task_form.get('file_type'),
                            'file_name': data_file.filename}
             task.validate_configurations('file', task_config)
-            async with aiofiles.open(os.path.join(task.pipeline.variable_dir, task_config.get('file_name')),  # type: ignore
-                                     'wb') as file:
+            async with aiofiles.open(os.path.join(task.pipeline.variable_dir,
+                                                  task_config.get('file_name')), 'wb') as file:  # type: ignore
                 await file.write(await data_file.read())
 
         pipeline.tasks[task_uuid] = task.base_dict_obj()
