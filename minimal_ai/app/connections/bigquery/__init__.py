@@ -1,6 +1,5 @@
 import logging
-import os
-from typing import Any, List
+from typing import List
 
 from google.cloud.bigquery import Client, dbapi
 from google.oauth2 import service_account

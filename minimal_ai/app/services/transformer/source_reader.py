@@ -22,7 +22,7 @@ class SparkSourceReaders:
     current_task: Any
     spark: SparkSession
 
-    def bigquery_reader(self) -> None:
+    async def bigquery_reader(self) -> None:
         """ registers dataframe from bigquery source
         """
 
@@ -45,14 +45,15 @@ class SparkSourceReaders:
             ))
 
         except Exception as excep:
+            await self.current_task.pipeline.update_node_reactflow_props(self.current_task.uuid, "type", "failNode")
             raise MinimalETLException(
                 f"Failed to load data from Bigquery - {self.current_task.loader_config['table']} | {excep.args}")
 
-    def rdbms_reader(self) -> None:
+    async def rdbms_reader(self) -> None:
         """ registers dataframe from rdbms source
         """
         try:
-            match self.current_task.loader_config['db_type']:
+            match self.current_task.loader_type:
                 case "mysql":
 
                     url = DB_MYSQL_URL.format(host=self.current_task.loader_config.get('host'),
@@ -85,10 +86,11 @@ class SparkSourceReaders:
             ))
 
         except Exception as excep:
+            await self.current_task.pipeline.update_node_reactflow_props(self.current_task.uuid, "type", "failNode")
             raise MinimalETLException(
                 f"Failed to read data from - {self.current_task.loader_config['db_type']} | {excep.args}")
 
-    def local_file_reader(self) -> None:
+    async def local_file_reader(self) -> None:
         """ registers dataframe from csv source
 
         Args:
@@ -127,10 +129,11 @@ class SparkSourceReaders:
             ))
 
         except Exception as excep:
+            await self.current_task.pipeline.update_node_reactflow_props(self.current_task.uuid, "type", "failNode")
             raise MinimalETLException(
                 f"Failed to read from {self.current_task.loader_config['file_path']} | {excep.args}")
 
-    def gs_file_reader(self) -> None:
+    async def gs_file_reader(self) -> None:
         """ registers dataframe from csv source
 
         Args:
@@ -170,10 +173,11 @@ class SparkSourceReaders:
             ))
 
         except Exception as excep:
+            await self.current_task.pipeline.update_node_reactflow_props(self.current_task.uuid, "type", "failNode")
             raise MinimalETLException(
                 f"Failed to load from {self.current_task.loader_config['file_path']} | {excep.args}")
 
-    def json_file_reader(self) -> None:
+    async def json_file_reader(self) -> None:
         """ registers dataframe from JSON source
         """
 
@@ -202,5 +206,6 @@ class SparkSourceReaders:
             ))
 
         except Exception as excep:
+            await self.current_task.pipeline.update_node_reactflow_props(self.current_task.uuid, "type", "failNode")
             raise MinimalETLException(
                 f"Failed to read from {self.current_task.loader_config['file_path']} | {excep.args}")

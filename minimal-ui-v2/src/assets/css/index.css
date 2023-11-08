@@ -99,10 +99,10 @@ body {
   letter-spacing: -0.2px;
   font-size: 10px;
   background: #eee;
-  border: 5px solid #858585;
+  border: 3px solid #858585;
+  color: #858585;
   border-radius: 15px;
   text-align: center;
-  box-shadow: 5px 0 15px #858585, -5px 0 15px #858585;
 }
 
 .react-flow__node-configuredNode {
@@ -114,10 +114,10 @@ body {
   letter-spacing: -0.2px;
   font-size: 10px;
   background: #eee;
-  border: 5px solid #c7c748;
+  border: 3px solid #d3d300;
+  color: #d3d300;
   border-radius: 15px;
   text-align: center;
-  box-shadow: 5px 0 15px #c7c748, -5px 0 15px #c7c748;
 }
 
 .react-flow__node-successNode {
@@ -129,10 +129,10 @@ body {
   letter-spacing: -0.2px;
   font-size: 10px;
   background: #eee;
-  border: 5px solid #60a364;
+  border: 3px solid #009f0b;
+  color: #009f0b;
   border-radius: 15px;
   text-align: center;
-  box-shadow: 5px 0 15px #60a364, -5px 0 15px #60a364;
 }
 
 .react-flow__node-failNode {
@@ -144,8 +144,8 @@ body {
   letter-spacing: -0.2px;
   font-size: 10px;
   background: #eee;
-  border: 5px solid #a36060;
+  border: 3px solid #cb0000;
+  color: #cb0000;
   border-radius: 15px;
   text-align: center;
-  box-shadow: 5px 0 15px #a36060, -5px 0 15px #a36060;
 }

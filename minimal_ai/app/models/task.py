@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 from pydantic.dataclasses import dataclass
 from pyspark.sql import SparkSession
 
+from minimal_ai.app.connections import BigQuery, MySql
 from minimal_ai.app.services.minimal_exception import MinimalETLException
 from minimal_ai.app.services.transformer import (SparkSinkWriter,
                                                  SparkSourceReaders,
@@ -207,7 +208,29 @@ class DataLoaderTask(Task):
         raise MinimalETLException(
             "Sample records not loaded. Execute the task to load the data")
 
-    def base_dict_obj(self) -> Dict:
+    async def get_schema(self) -> list[dict]:
+        """method to fetch the column list for the task
+        """
+        _connections = {
+            "mysql": MySql,
+            "bigquery": BigQuery
+        }
+        try:
+            logger.info("fetching schema from source - %s", self.loader_type)
+            if self.loader_type:
+                conn = _connections[self.loader_type](database=self.loader_config['database'],
+                                                      host=self.loader_config['host'],
+                                                      password=self.loader_config['password'],
+                                                      username=self.loader_config['user'],
+                                                      port=int(self.loader_config['port']))
+
+                return conn.get_information_schema(self.loader_config['table'])
+            raise MinimalETLException("unable to fetch schema")
+        except Exception as excep:
+            logger.error("error while fetching schema - %s", excep.args)
+            raise MinimalETLException(excep.args)
+
+    async def base_dict_obj(self) -> Dict:
         """ method to get task dict object
         """
         return {
@@ -222,7 +245,7 @@ class DataLoaderTask(Task):
             'loader_config': self.loader_config
         }
 
-    def validate_configurations(self, loader_type: str, loader_config: Dict):
+    async def validate_configurations(self, loader_type: str, loader_config: Dict):
         """ method to configure task loader
 
         Args:
@@ -234,7 +257,7 @@ class DataLoaderTask(Task):
             loader = LoaderType(loader_type)
 
             match loader:
-                case "rdbms":
+                case "mysql":
                     _config = DBConfig.model_validate(loader_config)
                     logger.debug(_config)
                     logger.info('Configuring %s loader for task - %s',
@@ -286,23 +309,24 @@ class DataLoaderTask(Task):
 
         if not self.all_upstream_task_executed:
             self.status = TaskStatus.FAILED
+            await self.pipeline.update_node_reactflow_props(self.uuid, "type", "failNode")
             logger.error(
                 'Not all upstream tasks have been executed. Please execute them first')
             raise MinimalETLException(
                 'Not all upstream tasks have been executed. Please execute them first')
 
         match self.loader_type:
-            case "rdbms":
-                SparkSourceReaders(self, spark).rdbms_reader()
+            case "mysql":
+                await SparkSourceReaders(self, spark).rdbms_reader()
 
             case "local_file":
-                SparkSourceReaders(self, spark).local_file_reader()
+                await SparkSourceReaders(self, spark).local_file_reader()
 
             case "gcp_bucket":
-                SparkSourceReaders(self, spark).gs_file_reader()
+                await SparkSourceReaders(self, spark).gs_file_reader()
 
             case "bigquery":
-                SparkSourceReaders(self, spark).bigquery_reader()
+                await SparkSourceReaders(self, spark).bigquery_reader()
 
             case _:
                 self.status = TaskStatus.FAILED
@@ -312,9 +336,9 @@ class DataLoaderTask(Task):
                     f'Loader type - {self.loader_type} not supported')
 
         self.status = TaskStatus.EXECUTED
-
+        await self.pipeline.update_node_reactflow_props(self.uuid, "type", "successNode")
         return {
-            'task': self.base_dict_obj(),
+            'task': await self.base_dict_obj(),
             'executed': self.status
         }
 
@@ -341,7 +365,7 @@ class DataSinkTask(Task):
             return True
         return False
 
-    def base_dict_obj(self) -> Dict:
+    async def base_dict_obj(self) -> Dict:
         """ method to get task dict object
         """
         return {
@@ -369,6 +393,7 @@ class DataSinkTask(Task):
         logger.info("Executing task - %s", self.uuid)
         if not self.all_upstream_task_executed:
             self.status = TaskStatus.FAILED
+            await self.pipeline.update_node_reactflow_props(self.uuid, "type", "failNode")
             logger.error(
                 'Not all upstream tasks have been executed. Please execute them first')
             raise MinimalETLException(
@@ -401,12 +426,12 @@ class DataSinkTask(Task):
                     f'Sink type - {self.sink_type} not supported')
 
         self.status = TaskStatus.EXECUTED
-
+        await self.pipeline.update_node_reactflow_props(self.uuid, "type", "successNode")
         return {
-            'task': self.base_dict_obj()
+            'task': await self.base_dict_obj()
         }
 
-    def validate_configurations(self, sink_type: str, sink_config: Dict):
+    async def validate_configurations(self, sink_type: str, sink_config: Dict):
         """ method to configure task loader
 
         Args:
@@ -490,7 +515,7 @@ class DataTransformerTask(Task):
         raise MinimalETLException(
             "Sample records not loaded. Execute the task to load the data")
 
-    def base_dict_obj(self) -> Dict:
+    async def base_dict_obj(self) -> Dict:
         """ method to get task dict object
         """
         return {
@@ -505,7 +530,7 @@ class DataTransformerTask(Task):
             'transformer_config': self.transformer_config
         }
 
-    def validate_configurations(self, transformer_type: str, transformer_config: Dict):
+    async def validate_configurations(self, transformer_type: str, transformer_config: Dict):
         """ method to configure task loader
 
         Args:
@@ -577,6 +602,7 @@ class DataTransformerTask(Task):
         logger.info("Executing task - %s", self.uuid)
         if not self.all_upstream_task_executed:
             self.status = TaskStatus.FAILED
+            await self.pipeline.update_node_reactflow_props(self.uuid, "type", "failNode")
             logger.error(
                 'Not all upstream tasks have been executed. Please execute them first')
             raise MinimalETLException(
@@ -585,7 +611,7 @@ class DataTransformerTask(Task):
         await SparkTransformer(current_task=self, spark=spark).transform()
 
         self.status = TaskStatus.EXECUTED
-
+        await self.pipeline.update_node_reactflow_props(self.uuid, "type", "successNode")
         return {
-            'task': self.base_dict_obj()
+            'task': await self.base_dict_obj()
         }

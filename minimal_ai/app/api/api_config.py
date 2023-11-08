@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # BACKEND_CORS_ORIGINS is a JSON-formatted list of origins
     # e.g: '["http://localhost", "http://localhost:4200", "http://localhost:3000", \
     # "http://localhost:8080", "http://local.dockertoolbox.tiangolo.com"]'
-    BACKEND_CORS_ORIGINS: list[str] = Field(default=["http://localhost:3006"])
+    BACKEND_CORS_ORIGINS: list[str] = Field(default=["http://localhost:5173"])
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, urls: Union[str, list[str]]) -> Union[list[str], str]:

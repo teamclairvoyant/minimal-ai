@@ -54,7 +54,34 @@ class TaskService:
             raise MinimalETLException(
                 f'Task - {task_uuid} not defined in pipeline - {pipeline_uuid}')
 
-        return pipeline.tasks[task_uuid]
+        task = Task.get_task_from_config(
+            pipeline.tasks[task_uuid], pipeline_uuid)
+        return await task.base_dict_obj()
+
+    @staticmethod
+    async def get_schema(pipeline_uuid: str, task_uuid: str) -> list[dict]:
+        """ method to get schema from task
+
+        Args:
+            pipeline_uuid (str): uuid of pipeline
+            task_uuid (str): uuid of task
+
+        Returns:
+            Dict: task object
+        """
+        pipeline = await Pipeline.get_pipeline_async(pipeline_uuid)
+        logger.info('Pipeline - %s', pipeline.uuid)
+
+        if not pipeline.has_task(task_uuid):
+            logger.error('Task - %s not defined in pipeline - %s',
+                         task_uuid, pipeline_uuid)
+            raise MinimalETLException(
+                f'Task - {task_uuid} not defined in pipeline - {pipeline_uuid}')
+
+        task = Task.get_task_from_config(
+            pipeline.tasks[task_uuid], pipeline_uuid)
+
+        return await task.get_schema()
 
     @staticmethod
     async def get_sample_records(pipeline_uuid: str, task_uuid: str) -> Dict:
@@ -121,6 +148,8 @@ class TaskService:
                 f'Task - {task_uuid} has downstream tasks. Please delete them first')
 
         task = pipeline.tasks.pop(task_uuid)
+        await pipeline.remove_node_reactflow_props(task['uuid'])
+        await pipeline.remove_edge_reactflow_props(task['uuid'])
 
         if task['upstream_tasks']:
             for _task_uuid in task['upstream_tasks']:
@@ -131,7 +160,7 @@ class TaskService:
         logger.info('Saving Pipeline - %s', pipeline_uuid)
 
         pipeline.save()
-        return task
+        return await pipeline.pipeline_summary()
 
     @staticmethod
     async def update_task_by_config(pipeline_uuid: str, task_uuid: str, request: Request) -> Dict:
@@ -176,6 +205,7 @@ class TaskService:
                 logger.info('Updating task config and properties')
                 task.validate_configurations(task_config.config_type,
                                              task_config.config_properties)
+                await pipeline.update_node_reactflow_props(task.uuid, "type", "configuredNode")
         else:
             task_form = await request.form()
             data_file: UploadFile = task_form.get('data_file')  # type: ignore

@@ -120,9 +120,9 @@ class PipelineService:
             if pipeline.tasks[task]['task_type'] == TaskType.DATA_LOADER:
                 root_tasks.append(task)
 
-        await pipeline.execute(root_tasks)
+        exec_data = await pipeline.execute(root_tasks)
 
-        return {"pipeline": pipeline_uuid, "status": "COMPLETED"}
+        return exec_data
 
     @staticmethod
     def scheduled_execution(pipeline_uuid: str):

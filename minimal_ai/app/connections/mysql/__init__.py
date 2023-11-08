@@ -77,7 +77,7 @@ class MySql(Connection):
             self.ssh_tunnel.stop()
             self.ssh_tunnel = None
 
-    def get_information_schema(self, table_name: str | None = None) -> List[tuple]:
+    def get_information_schema(self, table_name: str | None = None) -> List[dict]:
         """method to get the information schema
         """
         query = f"""
@@ -86,7 +86,7 @@ class MySql(Connection):
             , COLUMN_DEFAULT
             , COLUMN_KEY
             , COLUMN_NAME
-            , COLUMN_TYPE
+            , cast(COLUMN_TYPE as char(20)) as COLUMN_TYPE
             , IS_NULLABLE
         FROM information_schema.columns
         WHERE table_schema = '{self.database}'

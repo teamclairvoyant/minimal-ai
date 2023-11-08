@@ -8,16 +8,18 @@ logger = logging.getLogger(__name__)
 
 class Connection():
 
-    def execute(self, query_string: str, commit=False) -> List[tuple]:
+    def execute(self, query_string: str, commit=False) -> List[dict]:
         """method to execute the query string"""
         logger.debug("Info connecting to database")
-        data: List[tuple] = []
+        data: List[dict] = []
         conn = self.build_connection()  # type: ignore
-        print(conn)
+
         with conn.cursor() as cursor:
             cursor.execute(clean_query(query_string))
             if cursor.description:
-                data = cursor.fetchall()
+                columns = cursor.column_names
+                for row in cursor.fetchall():
+                    data.append(dict(zip(columns, row)))
 
         if commit:
             conn.commit()

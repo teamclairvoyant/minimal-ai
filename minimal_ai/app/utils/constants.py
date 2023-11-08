@@ -1,5 +1,3 @@
-import math
-import random
 from enum import Enum
 from typing import Any, Dict, List
 
@@ -42,7 +40,7 @@ class TaskStatus(str, Enum):
     EXECUTED = 'executed'
     FAILED = 'failed'
     DRAFT = 'draft'
-    UPDATED = 'updated'
+    CONFIGURED = 'configured'
 
 
 class PipelineType(str, Enum):
@@ -111,14 +109,14 @@ class LoaderType(str, Enum):
     LOCAL_FILE = 'local_file'
     GCP_BUCKET = 'gcp_bucket'
     S3_FILE = 's3_file'
-    RDBMS = 'rdbms'
+    MYSQL = 'mysql'
     BIGQUERY = 'bigquery'
 
 
 class SinkType(str, Enum):
     """ Supported sink type """
     LOCAL_FILE = 'local_file'
-    RDBMS = 'rdbms'
+    MYSQL = 'mysql'
     GCP_BUCKET = 'gcp_bucket'
     S3_FILE = 's3_file'
     BIGQUERY = 'bigquery'
@@ -168,7 +166,6 @@ class TaskUpdateModel(BaseModel):
 class DBConfig(BaseModel):
     """ properties for the mysql connection
     """
-    db_type: str
     host: str
     port: str
     user: str

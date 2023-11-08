@@ -60,6 +60,7 @@ class SparkTransformer:
                 _df.toJSON().take(200)
             ))
         except Exception as excep:
+            await self.current_task.pipeline.update_node_reactflow_props(self.current_task.uuid, "type", "failNode")
             raise MinimalETLException(
                 f'Failed to filter dataframe - {excep.args}')
 
@@ -87,6 +88,7 @@ class SparkTransformer:
                 _df_ai.toJSON().take(200)
             ))
         except Exception as excep:
+            await self.current_task.pipeline.update_node_reactflow_props(self.current_task.uuid, "type", "failNode")
             raise MinimalETLException(
                 f'Failed to transform dataframe with spark AI - {excep.args}')
 
@@ -134,5 +136,6 @@ class SparkTransformer:
             ))
         except Exception as excep:
             logger.info(excep)
+            await self.current_task.pipeline.update_node_reactflow_props(self.current_task.uuid, "type", "failNode")
             raise MinimalETLException(
                 f'Failed to join dataframe - {excep.args}')

@@ -290,6 +290,27 @@ async def get_task_by_uuid(pipeline_uuid: str, task_uuid: str) -> JSONResponse:
         return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"error": excep.args})
 
 
+@api_router.get("/pipeline/{pipeline_uuid}/task/{task_uuid}/schema")
+async def get_schema_by_task(pipeline_uuid: str, task_uuid: str) -> JSONResponse:
+    """ endpoint to get schema from a task
+
+    Args:
+        pipeline_uuid (str): uuid of the pipeline
+        task_uuid (str): uuid of the task
+    """
+    try:
+        logger.info("GET /pipeline/%s/task/%s/schema",
+                    pipeline_uuid, task_uuid)
+        task_schema = await TaskService.get_schema(pipeline_uuid, task_uuid)
+        return JSONResponse(status_code=status.HTTP_200_OK,
+                            content=task_schema)
+
+    except MinimalETLException as excep:
+        logger.error("GET /pipeline/%s/task/%s/schema %s",
+                     pipeline_uuid, task_uuid, excep.args)
+        return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"error": excep.args})
+
+
 @api_router.get("/pipeline/{uuid}/tasks")
 async def get_all_tasks_by_pipeline(uuid: str) -> JSONResponse:
     """ endpoint to fetch all the tasks from a pipeline
@@ -329,26 +350,6 @@ async def get_sample_records(pipeline_uuid: str, task_uuid: str) -> JSONResponse
         return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"error": excep.args})
 
 
-@api_router.delete("/pipeline/{pipeline_uuid}/task/{task_uuid}")
-async def delete_task_by_uuid(pipeline_uuid: str, task_uuid: str) -> JSONResponse:
-    """ endpoint to delete task from a pipeline
-
-    Args:
-        pipeline_uuid (str): uuid of pipeline
-        task_uuid (str): uuid of task
-    """
-    try:
-        logger.info("DELETE /pipeline/%s/task/%s", pipeline_uuid, task_uuid)
-        task = await TaskService.delete_task(pipeline_uuid, task_uuid)
-        return JSONResponse(status_code=status.HTTP_200_OK,
-                            content={'pipeline': pipeline_uuid, 'task': task, 'deleted': True})
-
-    except MinimalETLException as excep:
-        logger.error("DELETE /pipeline/%s/tasks %s | %s",
-                     pipeline_uuid, task_uuid, excep.args)
-        return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"error": excep.args})
-
-
 @api_router.put("/pipeline/{pipeline_uuid}/task/{task_uuid}")
 async def update_task(pipeline_uuid: str, task_uuid: str,
                       request: Request) -> JSONResponse:
@@ -374,6 +375,26 @@ async def update_task(pipeline_uuid: str, task_uuid: str,
         return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"error": excep.args})
 
 
+@api_router.delete("/pipeline/{pipeline_uuid}/task/{task_uuid}")
+async def delete_task(pipeline_uuid: str, task_uuid: str) -> JSONResponse:
+    """endpoint to delete task from pipeline
+
+    Args:
+        pipeline_uuid (str): uuid of pipeline
+        task_uuid (str): uuid of task
+    """
+    try:
+        logger.info("DELETE /pipeline/%s/task/%s", pipeline_uuid, task_uuid)
+        pipeline = await TaskService.delete_task(pipeline_uuid, task_uuid)
+
+        return JSONResponse(status_code=status.HTTP_200_OK,
+                            content={'pipeline': pipeline})
+    except MinimalETLException as excep:
+        logger.error("DELETE /pipeline/%s/task/%s | %s",
+                     pipeline_uuid, task_uuid, excep.args)
+        return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"error": excep.args})
+
+
 @api_router.get("/pipeline/{pipeline_uuid}/execute")
 async def execute_pipeline(pipeline_uuid: str) -> JSONResponse:
     """endpoint to trigger pipline execution
@@ -385,9 +406,9 @@ async def execute_pipeline(pipeline_uuid: str) -> JSONResponse:
     try:
         logger.info("executing pipeline - %s", pipeline_uuid)
         async with transaction():
-            execution_details = await PipelineService.execute_pipeline_by_uuid(
+            pipeline = await PipelineService.execute_pipeline_by_uuid(
                 pipeline_uuid)
-        return JSONResponse(status_code=status.HTTP_200_OK, content={"execution_details": execution_details})
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"pipeline": pipeline})
 
     except MinimalETLException as excep:
         logger.error("/pipeline/%s/execute | %s", pipeline_uuid, excep.args)

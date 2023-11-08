@@ -189,7 +189,7 @@ class Pipeline:
                         "viewport": {
                             "x": 500,
                             "y": 50,
-                            "zoom": 1
+                            "zoom": 0.5
                         }
                     }
                 }, config_file, indent=4)
@@ -350,7 +350,11 @@ class Pipeline:
         return task_uuid in self.tasks
 
     async def add_edge_reactflow_props(self, target: str, source: str) -> None:
-        """method to add edge to reactflow props of pipeline object
+        """method to add edge to reactflow props of pipeline
+
+        Args:
+            target (str): name of target task
+            source (str): name of source task
         """
         logger.info("Adding edge and updating task dependency")
 
@@ -372,13 +376,29 @@ class Pipeline:
 
         self.reactflow_props['edges'].append(EDGE)
 
-    async def add_node_reactflow_props(self, task_uuid, task_type) -> None:
+    async def remove_edge_reactflow_props(self, target: str) -> None:
+        """method to remove edge from reactflow props of pipeline
+
+        Args:
+            target (str): uuid of task
+        """
+        logger.info(
+            "Removing edge from reactflow props of pipeline - %s", self.uuid)
+        edges: list = []
+        if self.reactflow_props['edges']:
+            for edge in self.reactflow_props['edges']:
+                if edge['target'] != target:
+                    edges.append(edge)
+        self.reactflow_props['edges'] = edges
+
+    async def add_node_reactflow_props(self, task) -> None:
         """method to add node to reactflow props of pipeline object
 
         Args:
-            reactflow_props (Dict[Any,Any]): reactflow props object
+            task
         """
-        logger.info("Adding reactflow props to pipeline - %s object", self.uuid)
+        logger.info(
+            "Adding node to reactflow props of pipeline - %s", self.uuid)
 
         NODE = {
             "width": 124,
@@ -402,30 +422,61 @@ class Pipeline:
             }
         }
 
-        NODE['id'] = task_uuid
-        NODE['data']['title'] = task_uuid
-        NODE['data']['icon'] = ICONSET[task_type]
-        NODE['data']['type'] = task_type
+        NODE['id'] = task.uuid
+        NODE['data']['title'] = task.name
+        NODE['data']['icon'] = ICONSET[task.task_type]
+        NODE['data']['type'] = task.task_type
 
         self.reactflow_props['nodes'].append(NODE)
+
+    async def update_node_reactflow_props(self, task_id: str, key: str, value: str) -> None:
+        """update node property for a task
+
+        Args:
+            task_id (str): id of the task
+            key (str): property to be updated
+            value (str): new value
+        """
+        logger.info("Updating node property for - %s", task_id)
+        if not self.reactflow_props["nodes"]:
+            logger.error("Reactflow prop empty")
+            raise MinimalETLException("Reactflow prop is empty")
+
+        for idx, node in enumerate(self.reactflow_props["nodes"]):
+            if node["id"] == task_id:
+                node[key] = value
+                self.reactflow_props["nodes"][idx] = node
+
+    async def remove_node_reactflow_props(self, task_uuid) -> None:
+        """method to remove node from reactflow props of pipeline
+
+        Args:
+            task_uuid (str): uuid of task
+        """
+        logger.info(
+            "Removing node from reactflow props of pipeline - %s", self.uuid)
+        if self.reactflow_props['nodes']:
+            for idx, node in enumerate(self.reactflow_props['nodes']):
+                if node['id'] == task_uuid:
+                    del self.reactflow_props['nodes'][idx]
 
     async def add_task(self, task, priority=None) -> None:
         """ method to attach task to pipeline
 
         Args:
-            task
-            priority
+            task (str): uuid of task
+            priority (int): priority of task in pipeline
 
         """
 
         if priority is None or priority > len(self.tasks.keys()):
-            self.tasks[task.uuid] = task.base_dict_obj()
+            self.tasks[task.uuid] = await task.base_dict_obj()
         else:
             task_list = list(self.tasks.items())
-            task_list.insert(priority - 1, (task.uuid, task.base_dict_obj()))
+            task_list.insert(priority - 1, (task.uuid, await task.base_dict_obj()))
             self.tasks = dict(task_list)
 
-        await self.add_node_reactflow_props(task.uuid, task.task_type)
+        await self.add_node_reactflow_props(task)
         logger.info('Added task - %s to the pipeline', task.uuid)
         # self.validate('A cycle was formed while adding a task')
 
@@ -434,7 +485,7 @@ class Pipeline:
     def save(self) -> None:
         """ method to save current pipeline
         """
-
+        self.modified_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         pipeline_dict = self.base_obj()
         try:
             with open(os.path.join(self.config_dir, METADATA_FILE), 'w') as file_config:
@@ -476,7 +527,7 @@ class Pipeline:
             raise MinimalETLException(
                 f"Failed to update Pipeline - {self.name} | {excep.args}")
 
-    async def execute(self, root_tasks: List) -> None:
+    async def execute(self, root_tasks: List) -> dict:
         """method to execute the pipeline
         """
         try:
@@ -536,16 +587,16 @@ class Pipeline:
 
             await PipelineExecutionEntity().update(key="id", value=exec_data['id'],
                                                    payload={"status": "COMPLETED"})
-
+            return await self.pipeline_summary()
         except Exception as excep:
             self.status = PipelineStatus.FAILED
             self.save()
-
+            logger.error("Error while executing pipeline - %s | %s",
+                         self.uuid, excep.args)
             await PipelineExecutionEntity().update(key="id", value=exec_data['id'],  # type: ignore
                                                    payload={"status": "FAILED"})
 
-            raise MinimalETLException(
-                f'Pipeline - {self.uuid} failed to execute | {excep.args}')
+            return await self.pipeline_summary()
 
     async def scheduled_execute(self, root_tasks: List) -> None:
         """method to execute the pipeline at scheduled time
