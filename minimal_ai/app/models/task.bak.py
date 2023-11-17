@@ -7,9 +7,11 @@ from pyspark.sql import SparkSession
 
 from minimal_ai.app.connections import BigQuery, MySql
 from minimal_ai.app.services.minimal_exception import MinimalETLException
-from minimal_ai.app.services.transformer import (SparkSinkWriter,
-                                                 SparkSourceReaders,
-                                                 SparkTransformer)
+from minimal_ai.app.services.transformer import (
+    SparkSinkWriter,
+    SparkSourceReaders,
+    SparkTransformer,
+)
 from minimal_ai.app.utils import *
 
 logger = logging.getLogger(__name__)
@@ -22,6 +24,7 @@ class Task:
     task_type: TaskType
     status: TaskStatus = TaskStatus.DRAFT
     pipeline: Any = None
+    config: dict = field(default_factory=dict)
     upstream_tasks: List[str] = field(default_factory=list)
     downstream_tasks: List[str] = field(default_factory=list)
 
@@ -33,18 +36,20 @@ class Task:
         _executed = True
         for task_uuid in self.upstream_tasks:
             _task = self.pipeline.tasks[task_uuid]
-            if _task['status'] != "executed":
+            if _task["status"] != "executed":
                 _executed = False
                 break
         return _executed
 
     @classmethod
-    async def create(cls,
-                     name: str,
-                     task_type: str,
-                     pipeline=None,
-                     priority: int | None = None,
-                     upstream_task_uuids=None) -> None:
+    async def create(
+        cls,
+        name: str,
+        task_type: str,
+        pipeline=None,
+        priority: int | None = None,
+        upstream_task_uuids=None,
+    ) -> None:
         """method to add task to a pipeline
 
         Args:
@@ -58,20 +63,20 @@ class Task:
             upstream_task_uuids = []
 
         uuid = clean_name(name)
-        logger.info('Creating task - %s', uuid)
+        logger.info("Creating task - %s", uuid)
         if pipeline is not None and pipeline.has_task(uuid):
             logger.error(
-                'Task - %s already present in pipeline - %s', uuid, pipeline.uuid)
+                "Task - %s already present in pipeline - %s", uuid, pipeline.uuid
+            )
             raise MinimalETLException(
-                f'Task {uuid} already exists. Please use a different name.')
+                f"Task {uuid} already exists. Please use a different name."
+            )
 
-        logger.info('Task - %s is of type %s', uuid, task_type)
+        logger.info("Task - %s is of type %s", uuid, task_type)
 
         task = cls.task_class_from_type(task_type)(
-            uuid=uuid,
-            name=name,
-            task_type=TaskType(task_type),
-            pipeline=pipeline)  # type: ignore
+            uuid=uuid, name=name, task_type=TaskType(task_type), pipeline=pipeline
+        )  # type: ignore
 
         await task.after_create(
             pipeline=pipeline,
@@ -80,24 +85,27 @@ class Task:
         )
 
     async def after_create(self, **kwargs) -> None:
-        """ method to add task to corresponding pipeline
-        """
-        if kwargs.get('upstream_task_uuids') is not None:
-            self.upstream_tasks.extend(kwargs.get(  # type: ignore
-                'upstream_task_uuids'))
+        """method to add task to corresponding pipeline"""
+        if kwargs.get("upstream_task_uuids") is not None:
+            self.upstream_tasks.extend(
+                kwargs.get("upstream_task_uuids")  # type: ignore
+            )
         await self.update_upstream_tasks(
-            add_to_task_uuids=kwargs.get('upstream_task_uuids'))
-        pipeline = kwargs.get('pipeline')
+            add_to_task_uuids=kwargs.get("upstream_task_uuids")
+        )
+        pipeline = kwargs.get("pipeline")
         if pipeline is not None:
-            priority = kwargs.get('priority')
+            priority = kwargs.get("priority")
 
             await pipeline.add_task(
                 self,
                 priority=priority,
             )
 
-    async def update_upstream_tasks(self, add_to_task_uuids=None, remove_from_task_uuids=None) -> None:
-        """ method to update the upstream tasks of current task
+    async def update_upstream_tasks(
+        self, add_to_task_uuids=None, remove_from_task_uuids=None
+    ) -> None:
+        """method to update the upstream tasks of current task
 
         Args:
             add_to_task_uuids (list, optional): upstream tasks to update. Defaults to [].
@@ -116,11 +124,14 @@ class Task:
             for task_uuid in add_to_task_uuids:
                 if not self.pipeline.has_task(task_uuid):
                     logger.error(
-                        'Task - %s not defined in pipeline - %s', task_uuid, self.pipeline.uuid)
+                        "Task - %s not defined in pipeline - %s",
+                        task_uuid,
+                        self.pipeline.uuid,
+                    )
                     raise MinimalETLException(
-                        f'Task - {task_uuid} not defined in pipeline - {self.pipeline.uuid}')
-                self.pipeline.tasks[task_uuid]['downstream_tasks'].append(
-                    self.uuid)
+                        f"Task - {task_uuid} not defined in pipeline - {self.pipeline.uuid}"
+                    )
+                self.pipeline.tasks[task_uuid]["downstream_tasks"].append(self.uuid)
                 await self.pipeline.add_edge_reactflow_props(self.uuid, task_uuid)
 
         if remove_from_task_uuids:
@@ -128,15 +139,18 @@ class Task:
             for task_uuid in remove_from_task_uuids:
                 if not self.pipeline.has_task(task_uuid):
                     logger.error(
-                        'Task - %s not defined in pipeline - %s', task_uuid, self.pipeline.uuid)
+                        "Task - %s not defined in pipeline - %s",
+                        task_uuid,
+                        self.pipeline.uuid,
+                    )
                     raise MinimalETLException(
-                        f'Task - {task_uuid} not defined in pipeline - {self.pipeline.uuid}')
-                self.pipeline.tasks[task_uuid]['downstream_tasks'].remove(
-                    self.uuid)
+                        f"Task - {task_uuid} not defined in pipeline - {self.pipeline.uuid}"
+                    )
+                self.pipeline.tasks[task_uuid]["downstream_tasks"].remove(self.uuid)
 
     @classmethod
     def get_task_from_config(cls, task_config: Dict, _pipeline):
-        """ class method to get the task object from config
+        """class method to get the task object from config
 
         Args:
             task_config (Dict): config of task properties
@@ -149,14 +163,15 @@ class Task:
             Task: object of class task
         """
         # task_config.pop('all_upstream_task_executed')
-        task = cls.task_class_from_type(
-            task_config['task_type'])(**task_config)  # type: ignore
+        task = cls.task_class_from_type(task_config["task_type"])(
+            **task_config
+        )  # type: ignore
         task.pipeline = _pipeline
         return task
 
     @classmethod
-    def task_class_from_type(cls, task_type: str) -> 'Task':
-        """ method to determine task class on the basis of task type
+    def task_class_from_type(cls, task_type: str) -> "Task":
+        """method to determine task class on the basis of task type
 
         Args:
             task_type (str): type of the task
@@ -172,8 +187,7 @@ class Task:
             case TaskType.DATA_TRANSFORMER:
                 return DataTransformerTask  # type: ignore
             case _:
-                raise MinimalETLException(
-                    f'Task type - {task_type} not supported')
+                raise MinimalETLException(f"Task type - {task_type} not supported")
 
 
 @dataclass(kw_only=True)
@@ -185,7 +199,9 @@ class DataLoaderTask(Task):
         self.loader_config = {} if self.loader_config is None else self.loader_config
 
         self.upstream_tasks = [] if self.upstream_tasks is None else self.upstream_tasks
-        self.downstream_tasks = [] if self.downstream_tasks is None else self.downstream_tasks
+        self.downstream_tasks = (
+            [] if self.downstream_tasks is None else self.downstream_tasks
+        )
 
     @property
     def is_configured(self) -> bool:
@@ -194,59 +210,58 @@ class DataLoaderTask(Task):
         Returns:
             bool: True/False
         """
-        if (self.loader_type and self.loader_type is not None) and \
-                (self.loader_config and self.loader_config is not None):
+        if (self.loader_type and self.loader_type is not None) and (
+            self.loader_config and self.loader_config is not None
+        ):
             return True
         return False
 
     @property
     async def records(self) -> List:
-        """sample records from the task
-        """
-        if self.status == 'executed':
+        """sample records from the task"""
+        if self.status == "executed":
             return await self.pipeline.variable_manager.get_variable_data(self.uuid)
         raise MinimalETLException(
-            "Sample records not loaded. Execute the task to load the data")
+            "Sample records not loaded. Execute the task to load the data"
+        )
 
     async def get_schema(self) -> list[dict]:
-        """method to fetch the column list for the task
-        """
-        _connections = {
-            "mysql": MySql,
-            "bigquery": BigQuery
-        }
+        """method to fetch the column list for the task"""
+        _connections = {"mysql": MySql, "bigquery": BigQuery}
         try:
             logger.info("fetching schema from source - %s", self.loader_type)
             if self.loader_type:
-                conn = _connections[self.loader_type](database=self.loader_config['database'],
-                                                      host=self.loader_config['host'],
-                                                      password=self.loader_config['password'],
-                                                      username=self.loader_config['user'],
-                                                      port=int(self.loader_config['port']))
+                conn = _connections[self.loader_type](
+                    database=self.loader_config["database"],
+                    host=self.loader_config["host"],
+                    password=self.loader_config["password"],
+                    username=self.loader_config["user"],
+                    port=int(self.loader_config["port"]),
+                )
 
-                return conn.get_information_schema(self.loader_config['table'])
+                return conn.get_information_schema(self.loader_config["table"])
             raise MinimalETLException("unable to fetch schema")
         except Exception as excep:
             logger.error("error while fetching schema - %s", excep.args)
             raise MinimalETLException(excep.args)
 
     async def base_dict_obj(self) -> Dict:
-        """ method to get task dict object
-        """
+        """method to get task dict object"""
         return {
-            'uuid': self.uuid,
-            'name': self.name,
-            'status': self.status,
-            'task_type': self.task_type,
-            'configured': self.is_configured,
-            'upstream_tasks': self.upstream_tasks,
-            'downstream_tasks': self.downstream_tasks,
-            'loader_type': self.loader_type,
-            'loader_config': self.loader_config
+            "uuid": self.uuid,
+            "name": self.name,
+            "status": self.status,
+            "task_type": self.task_type,
+            "configured": self.is_configured,
+            "config": self.config,
+            "upstream_tasks": self.upstream_tasks,
+            "downstream_tasks": self.downstream_tasks,
+            "loader_type": self.loader_type,
+            "loader_config": self.loader_config,
         }
 
     async def validate_configurations(self, loader_type: str, loader_config: Dict):
-        """ method to configure task loader
+        """method to configure task loader
 
         Args:
             loader_type (str): type of the loader
@@ -260,43 +275,48 @@ class DataLoaderTask(Task):
                 case "mysql":
                     _config = DBConfig.model_validate(loader_config)
                     logger.debug(_config)
-                    logger.info('Configuring %s loader for task - %s',
-                                loader_type, self.uuid)
+                    logger.info(
+                        "Configuring %s loader for task - %s", loader_type, self.uuid
+                    )
                     self.loader_type = loader
                     self.loader_config = _config.model_dump()
 
                 case "local_file":
                     _config = FileConfig.model_validate(loader_config)
                     logger.debug(_config)
-                    logger.info('Configuring %s loader for task - %s',
-                                loader_type, self.uuid)
+                    logger.info(
+                        "Configuring %s loader for task - %s", loader_type, self.uuid
+                    )
                     self.loader_type = loader
                     self.loader_config = _config.model_dump()
 
                 case "gcp_bucket":
                     _config = GSFileConfig.model_validate(loader_config)
                     logger.debug(_config)
-                    logger.info('Configuring %s loader for task - %s',
-                                loader_type, self.uuid)
+                    logger.info(
+                        "Configuring %s loader for task - %s", loader_type, self.uuid
+                    )
                     self.loader_type = loader
                     self.loader_config = _config.model_dump()
 
                 case "bigquery":
                     _config = BigQueryConfig.model_validate(loader_config)
-                    logger.info('Configuring %s sink for task - %s',
-                                loader_type, self.uuid)
+                    logger.info(
+                        "Configuring %s sink for task - %s", loader_type, self.uuid
+                    )
                     self.loader_type = loader
                     self.loader_config = _config.model_dump()
 
                 case _:
-                    logger.error('Loader type - %s not supported', loader_type)
+                    logger.error("Loader type - %s not supported", loader_type)
                     raise MinimalETLException(
-                        f'Loader type - {loader_type} not supported')
+                        f"Loader type - {loader_type} not supported"
+                    )
         except Exception as excep:
-            logger.error('Loader type - %s not supported | %s',
-                         loader_type, excep.args)
+            logger.error("Loader type - %s not supported | %s", loader_type, excep.args)
             raise MinimalETLException(
-                f'Loader type - {loader_type} not supported | {excep.args}')
+                f"Loader type - {loader_type} not supported | {excep.args}"
+            )
 
     async def execute(self, spark: SparkSession) -> Dict:
         """
@@ -309,11 +329,15 @@ class DataLoaderTask(Task):
 
         if not self.all_upstream_task_executed:
             self.status = TaskStatus.FAILED
-            await self.pipeline.update_node_reactflow_props(self.uuid, "type", "failNode")
+            await self.pipeline.update_node_reactflow_props(
+                self.uuid, "type", "failNode"
+            )
             logger.error(
-                'Not all upstream tasks have been executed. Please execute them first')
+                "Not all upstream tasks have been executed. Please execute them first"
+            )
             raise MinimalETLException(
-                'Not all upstream tasks have been executed. Please execute them first')
+                "Not all upstream tasks have been executed. Please execute them first"
+            )
 
         match self.loader_type:
             case "mysql":
@@ -330,17 +354,16 @@ class DataLoaderTask(Task):
 
             case _:
                 self.status = TaskStatus.FAILED
-                logger.error('Loader type - %s not supported',
-                             self.loader_type)
+                logger.error("Loader type - %s not supported", self.loader_type)
                 raise MinimalETLException(
-                    f'Loader type - {self.loader_type} not supported')
+                    f"Loader type - {self.loader_type} not supported"
+                )
 
         self.status = TaskStatus.EXECUTED
-        await self.pipeline.update_node_reactflow_props(self.uuid, "type", "successNode")
-        return {
-            'task': await self.base_dict_obj(),
-            'executed': self.status
-        }
+        await self.pipeline.update_node_reactflow_props(
+            self.uuid, "type", "successNode"
+        )
+        return {"task": await self.base_dict_obj(), "executed": self.status}
 
 
 @dataclass(kw_only=True)
@@ -352,7 +375,9 @@ class DataSinkTask(Task):
         self.sink_config = {} if self.sink_config is None else self.sink_config
 
         self.upstream_tasks = [] if self.upstream_tasks is None else self.upstream_tasks
-        self.downstream_tasks = [] if self.downstream_tasks is None else self.downstream_tasks
+        self.downstream_tasks = (
+            [] if self.downstream_tasks is None else self.downstream_tasks
+        )
 
     @property
     def is_configured(self) -> bool:
@@ -361,23 +386,25 @@ class DataSinkTask(Task):
         Returns:
             bool: True/False
         """
-        if (self.sink_type and self.sink_type is not None) and (self.sink_config and self.sink_config is not None):
+        if (self.sink_type and self.sink_type is not None) and (
+            self.sink_config and self.sink_config is not None
+        ):
             return True
         return False
 
     async def base_dict_obj(self) -> Dict:
-        """ method to get task dict object
-        """
+        """method to get task dict object"""
         return {
-            'uuid': self.uuid,
-            'name': self.name,
-            'status': self.status,
-            'task_type': self.task_type,
-            'configured': self.is_configured,
-            'upstream_tasks': self.upstream_tasks,
-            'downstream_tasks': self.downstream_tasks,
-            'sink_type': self.sink_type,
-            'sink_config': self.sink_config
+            "uuid": self.uuid,
+            "name": self.name,
+            "status": self.status,
+            "task_type": self.task_type,
+            "configured": self.is_configured,
+            "config": self.config,
+            "upstream_tasks": self.upstream_tasks,
+            "downstream_tasks": self.downstream_tasks,
+            "sink_type": self.sink_type,
+            "sink_config": self.sink_config,
         }
 
     async def execute(self, spark: SparkSession) -> Dict:
@@ -393,18 +420,25 @@ class DataSinkTask(Task):
         logger.info("Executing task - %s", self.uuid)
         if not self.all_upstream_task_executed:
             self.status = TaskStatus.FAILED
-            await self.pipeline.update_node_reactflow_props(self.uuid, "type", "failNode")
+            await self.pipeline.update_node_reactflow_props(
+                self.uuid, "type", "failNode"
+            )
             logger.error(
-                'Not all upstream tasks have been executed. Please execute them first')
+                "Not all upstream tasks have been executed. Please execute them first"
+            )
             raise MinimalETLException(
-                'Not all upstream tasks have been executed. Please execute them first')
+                "Not all upstream tasks have been executed. Please execute them first"
+            )
 
         if len(self.upstream_tasks) != 1:
             self.status = TaskStatus.FAILED
             logger.error(
-                "Task type - %s must have only 1 upstream task configured", self.task_type)
+                "Task type - %s must have only 1 upstream task configured",
+                self.task_type,
+            )
             raise MinimalETLException(
-                f"Task type - {self.task_type} must have only 1 upstream task configured")
+                f"Task type - {self.task_type} must have only 1 upstream task configured"
+            )
 
         match self.sink_type:
             case "rdbms":
@@ -421,18 +455,17 @@ class DataSinkTask(Task):
 
             case _:
                 self.status = TaskStatus.FAILED
-                logger.error('Sink type - %s not supported', self.sink_type)
-                raise MinimalETLException(
-                    f'Sink type - {self.sink_type} not supported')
+                logger.error("Sink type - %s not supported", self.sink_type)
+                raise MinimalETLException(f"Sink type - {self.sink_type} not supported")
 
         self.status = TaskStatus.EXECUTED
-        await self.pipeline.update_node_reactflow_props(self.uuid, "type", "successNode")
-        return {
-            'task': await self.base_dict_obj()
-        }
+        await self.pipeline.update_node_reactflow_props(
+            self.uuid, "type", "successNode"
+        )
+        return {"task": await self.base_dict_obj()}
 
     async def validate_configurations(self, sink_type: str, sink_config: Dict):
-        """ method to configure task loader
+        """method to configure task loader
 
         Args:
             sink_type (str): type of the sink
@@ -445,43 +478,46 @@ class DataSinkTask(Task):
                 case "rdbms":
                     _config = DBConfig.model_validate(sink_config)
                     logger.debug(_config)
-                    logger.info('Configuring %s sink for task - %s',
-                                sink_type, self.uuid)
+                    logger.info(
+                        "Configuring %s sink for task - %s", sink_type, self.uuid
+                    )
                     self.sink_type = SinkType(sink_type)
                     self.sink_config = _config.model_dump()
 
                 case "local_file":
                     _config = FileConfig.model_validate(sink_config)
                     logger.debug(_config)
-                    logger.info('Configuring %s sink for task - %s',
-                                sink_type, self.uuid)
+                    logger.info(
+                        "Configuring %s sink for task - %s", sink_type, self.uuid
+                    )
                     self.sink_type = SinkType(sink_type)
                     self.sink_config = _config.model_dump()
 
                 case "gcp_bucket":
                     _config = GSFileConfig.model_validate(sink_config)
                     logger.debug(_config)
-                    logger.info('Configuring %s sink for task - %s',
-                                sink_type, self.uuid)
+                    logger.info(
+                        "Configuring %s sink for task - %s", sink_type, self.uuid
+                    )
                     self.sink_type = SinkType(sink_type)
                     self.sink_config = _config.model_dump()
 
                 case "bigquery":
                     _config = BigQueryConfig.model_validate(sink_config)
-                    logger.info('Configuring %s sink for task - %s',
-                                sink_type, self.uuid)
+                    logger.info(
+                        "Configuring %s sink for task - %s", sink_type, self.uuid
+                    )
                     self.sink_type = SinkType(sink_type)
                     self.sink_config = _config.model_dump()
 
                 case _:
-                    logger.error('Sink type - %s not supported', sink_type)
-                    raise MinimalETLException(
-                        f'Sink type - {sink_type} not supported')
+                    logger.error("Sink type - %s not supported", sink_type)
+                    raise MinimalETLException(f"Sink type - {sink_type} not supported")
         except Exception as excep:
-            logger.error('Sink type - %s not supported | %s',
-                         sink_type, excep.args)
+            logger.error("Sink type - %s not supported | %s", sink_type, excep.args)
             raise MinimalETLException(
-                f'Sink type - {sink_type} not supported | {excep.args}')
+                f"Sink type - {sink_type} not supported | {excep.args}"
+            )
 
 
 @dataclass(kw_only=True)
@@ -490,9 +526,13 @@ class DataTransformerTask(Task):
     transformer_config: Dict[Any, Any] = field(default_factory=dict)
 
     def __post_init__(self):
-        self.transformer_config = {} if self.transformer_config is None else self.transformer_config
+        self.transformer_config = (
+            {} if self.transformer_config is None else self.transformer_config
+        )
         self.upstream_tasks = [] if self.upstream_tasks is None else self.upstream_tasks
-        self.downstream_tasks = [] if self.downstream_tasks is None else self.downstream_tasks
+        self.downstream_tasks = (
+            [] if self.downstream_tasks is None else self.downstream_tasks
+        )
 
     @property
     def is_configured(self) -> bool:
@@ -501,37 +541,40 @@ class DataTransformerTask(Task):
         Returns:
             bool: True/False
         """
-        if (self.transformer_type and self.transformer_type is not None) and \
-                (self.transformer_config and self.transformer_config is not None):
+        if (self.transformer_type and self.transformer_type is not None) and (
+            self.transformer_config and self.transformer_config is not None
+        ):
             return True
         return False
 
     @property
     async def records(self) -> List:
-        """sample records from the task
-        """
-        if self.status == 'executed':
+        """sample records from the task"""
+        if self.status == "executed":
             return await self.pipeline.variable_manager.get_variable_data(self.uuid)
         raise MinimalETLException(
-            "Sample records not loaded. Execute the task to load the data")
+            "Sample records not loaded. Execute the task to load the data"
+        )
 
     async def base_dict_obj(self) -> Dict:
-        """ method to get task dict object
-        """
+        """method to get task dict object"""
         return {
-            'uuid': self.uuid,
-            'name': self.name,
-            'status': self.status,
-            'task_type': self.task_type,
-            'configured': self.is_configured,
-            'upstream_tasks': self.upstream_tasks,
-            'downstream_tasks': self.downstream_tasks,
-            'transformer_type': self.transformer_type,
-            'transformer_config': self.transformer_config
+            "uuid": self.uuid,
+            "name": self.name,
+            "status": self.status,
+            "task_type": self.task_type,
+            "configured": self.is_configured,
+            "config": self.config,
+            "upstream_tasks": self.upstream_tasks,
+            "downstream_tasks": self.downstream_tasks,
+            "transformer_type": self.transformer_type,
+            "transformer_config": self.transformer_config,
         }
 
-    async def validate_configurations(self, transformer_type: str, transformer_config: Dict):
-        """ method to configure task loader
+    async def validate_configurations(
+        self, transformer_type: str, transformer_config: Dict
+    ):
+        """method to configure task loader
 
         Args:
             transformer_type (str): type of the sink
@@ -546,48 +589,67 @@ class DataTransformerTask(Task):
                 case "sparkAI":
                     _config = FilterModel.model_validate(transformer_config)
                     logger.debug(_config)
-                    logger.info('Configuring %s transformer for task - %s',
-                                transformer_type, self.uuid)
+                    logger.info(
+                        "Configuring %s transformer for task - %s",
+                        transformer_type,
+                        self.uuid,
+                    )
                     self.transformer_type = transformer
                     self.transformer_config = _config.model_dump()
 
                 case "join":
                     _config = JoinModel.model_validate(transformer_config)
                     logger.debug(_config)
-                    logger.info('Configuring %s transformer for task - %s',
-                                transformer_type, self.uuid)
+                    logger.info(
+                        "Configuring %s transformer for task - %s",
+                        transformer_type,
+                        self.uuid,
+                    )
                     self.transformer_type = transformer
                     self.transformer_config = _config.model_dump()
 
                 case "union":
-                    logger.info('Configuring %s transformer for task - %s',
-                                transformer_type, self.uuid)
+                    logger.info(
+                        "Configuring %s transformer for task - %s",
+                        transformer_type,
+                        self.uuid,
+                    )
                     self.transformer_type = transformer
 
                 case "filter":
-                    logger.info('Configuring %s transformer for task - %s',
-                                transformer_type, self.uuid)
+                    logger.info(
+                        "Configuring %s transformer for task - %s",
+                        transformer_type,
+                        self.uuid,
+                    )
                     _config = FilterModel.model_validate(transformer_config)
                     self.transformer_type = transformer
                     self.transformer_config = _config.model_dump()
 
                 case "pivot":
                     _config = PivotModel.model_validate(transformer_config)
-                    logger.info('Configuring %s transformer for task - %s',
-                                transformer_type, self.uuid)
+                    logger.info(
+                        "Configuring %s transformer for task - %s",
+                        transformer_type,
+                        self.uuid,
+                    )
                     self.transformer_type = transformer
                     self.transformer_config = _config.model_dump()
 
                 case _:
                     logger.error(
-                        'Transformer type - %s not supported', transformer_type)
+                        "Transformer type - %s not supported", transformer_type
+                    )
                     raise MinimalETLException(
-                        f'Transformer type - {transformer_type} not supported')
+                        f"Transformer type - {transformer_type} not supported"
+                    )
         except Exception as excep:
-            logger.error('Transformer type - %s not supported | %s',
-                         transformer_type, excep.args)
+            logger.error(
+                "Transformer type - %s not supported | %s", transformer_type, excep.args
+            )
             raise MinimalETLException(
-                f'Transformer type - {transformer_type} not supported | {excep.args}')
+                f"Transformer type - {transformer_type} not supported | {excep.args}"
+            )
 
     async def execute(self, spark: SparkSession) -> Dict:
         """method to execute task
@@ -602,16 +664,20 @@ class DataTransformerTask(Task):
         logger.info("Executing task - %s", self.uuid)
         if not self.all_upstream_task_executed:
             self.status = TaskStatus.FAILED
-            await self.pipeline.update_node_reactflow_props(self.uuid, "type", "failNode")
+            await self.pipeline.update_node_reactflow_props(
+                self.uuid, "type", "failNode"
+            )
             logger.error(
-                'Not all upstream tasks have been executed. Please execute them first')
+                "Not all upstream tasks have been executed. Please execute them first"
+            )
             raise MinimalETLException(
-                'Not all upstream tasks have been executed. Please execute them first')
+                "Not all upstream tasks have been executed. Please execute them first"
+            )
 
         await SparkTransformer(current_task=self, spark=spark).transform()
 
         self.status = TaskStatus.EXECUTED
-        await self.pipeline.update_node_reactflow_props(self.uuid, "type", "successNode")
-        return {
-            'task': await self.base_dict_obj()
-        }
+        await self.pipeline.update_node_reactflow_props(
+            self.uuid, "type", "successNode"
+        )
+        return {"task": await self.base_dict_obj()}

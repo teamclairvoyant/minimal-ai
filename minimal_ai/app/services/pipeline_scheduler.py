@@ -13,16 +13,16 @@ from minimal_ai.app.utils.constants import CronModel
 logger = logging.getLogger(__name__)
 
 jobstores = {
-    'default': SQLAlchemyJobStore(url=settings.MINIMAL_SYNC_DATABASE_URL, tablename=settings.MINIMAL_SCHEDULER_TABLE)
+    "default": SQLAlchemyJobStore(
+        url=settings.MINIMAL_SYNC_DATABASE_URL,
+        tablename=settings.MINIMAL_SCHEDULER_TABLE,
+    )
 }
 executors = {
-    'threadpool': ThreadPoolExecutor(settings.THREAD_POOL_EXECUTOR),
-    'processpool': ProcessPoolExecutor(settings.PROCESS_POOL_EXECUTOR)
+    "threadpool": ThreadPoolExecutor(settings.THREAD_POOL_EXECUTOR),
+    "processpool": ProcessPoolExecutor(settings.PROCESS_POOL_EXECUTOR),
 }
-job_defaults = {
-    'coalesce': False,
-    'max_instances': 3
-}
+job_defaults = {"coalesce": False, "max_instances": 3}
 
 
 @lru_cache
@@ -33,7 +33,8 @@ def get_scheduler() -> BackgroundScheduler:
         BackgroundScheduler: scheduler object
     """
     scheduler = BackgroundScheduler(
-        jobstores=jobstores, executors=executors, job_defaults=job_defaults)
+        jobstores=jobstores, executors=executors, job_defaults=job_defaults
+    )
     logger.info(scheduler)
     return scheduler
 
@@ -51,10 +52,10 @@ async def schedule_pipeline(pipeline_uuid: str, cron_time: CronModel, func):
         scheduler = get_scheduler()
         cron = CronTrigger(**cron_time.model_dump())
 
-        scheduler.add_job(func, args=[pipeline_uuid],
-                          trigger=cron, id=pipeline_uuid)
+        scheduler.add_job(func, args=[pipeline_uuid], trigger=cron, id=pipeline_uuid)
 
     except Exception as excep:
         logger.error("Error while scheduling pipeline - %s", pipeline_uuid)
         raise MinimalETLException(
-            f"Error while scheduling pipeline - {pipeline_uuid} | {excep.args}")
+            f"Error while scheduling pipeline - {pipeline_uuid} | {excep.args}"
+        )

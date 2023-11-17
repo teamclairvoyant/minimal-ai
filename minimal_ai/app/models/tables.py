@@ -1,7 +1,15 @@
 from typing import TypeVar
 
-from sqlalchemy import (Column, DateTime, Enum, Float, Integer, LargeBinary,
-                        String, Unicode)
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    Integer,
+    LargeBinary,
+    String,
+    Unicode,
+)
 from sqlalchemy.orm import declarative_base
 
 __all__ = ("Base", "PipelineExecution")
@@ -15,12 +23,13 @@ class PipelineExecution(Base):
     __tablename__ = "pipeline_execution"
 
     id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
-    trigger = Column(Enum('MANUAL', 'SCHEDULED',
-                          name='trigger'), nullable=False)
+    trigger = Column(Enum("MANUAL", "SCHEDULED", name="trigger"), nullable=False)
     pipeline_uuid = Column(String, nullable=False)
     execution_date = Column(DateTime, nullable=False)
-    status = Column(Enum('COMPLETED', 'FAILED', 'CANCELLED', 'RUNNING',
-                    name='runstatus'), nullable=False)
+    status = Column(
+        Enum("COMPLETED", "FAILED", "CANCELLED", "RUNNING", name="runstatus"),
+        nullable=False,
+    )
 
 
 class PipelineScheduler(Base):

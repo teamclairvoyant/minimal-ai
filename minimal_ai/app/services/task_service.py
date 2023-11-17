@@ -6,12 +6,19 @@ from typing import Dict
 import aiofiles
 from fastapi import Request, UploadFile
 
+from minimal_ai.app.models._task import (DataLoaderTask, DataSinkTask,
+                                         DataTransformerTask)
 from minimal_ai.app.models.pipeline import Pipeline
-from minimal_ai.app.models.task import Task
 from minimal_ai.app.services.minimal_exception import MinimalETLException
 from minimal_ai.app.utils import TaskModel, TaskUpdateModel
 
 logger = logging.getLogger(__name__)
+
+task_type = {
+    "data_loader": DataLoaderTask,
+    "data_transformer": DataTransformerTask,
+    "data_sink": DataSinkTask
+}
 
 
 class TaskService:
@@ -26,11 +33,12 @@ class TaskService:
         """
         pipeline = await Pipeline.get_pipeline_async(pipeline_uuid)
         logger.info('Pipeline - %s', pipeline.uuid)
-        await Task.create(task_config.name,
-                          task_config.task_type,
-                          pipeline=pipeline,
-                          priority=task_config.priority,
-                          upstream_task_uuids=task_config.upstream_task_uuids)
+
+        await task_type[task_config.task_type].create(task_config.name,
+                                                      task_config.task_type,
+                                                      pipeline=pipeline,
+                                                      priority=task_config.priority,
+                                                      upstream_task_uuids=task_config.upstream_task_uuids)
 
         return await pipeline.pipeline_summary()
 
@@ -54,8 +62,9 @@ class TaskService:
             raise MinimalETLException(
                 f'Task - {task_uuid} not defined in pipeline - {pipeline_uuid}')
 
-        task = Task.get_task_from_config(
-            pipeline.tasks[task_uuid], pipeline_uuid)
+        task_config = pipeline.tasks[task_uuid]
+        task: DataLoaderTask | DataSinkTask | DataTransformerTask = task_type[task_config["task_type"]](
+            **task_config)
         return await task.base_dict_obj()
 
     @staticmethod
@@ -77,9 +86,10 @@ class TaskService:
                          task_uuid, pipeline_uuid)
             raise MinimalETLException(
                 f'Task - {task_uuid} not defined in pipeline - {pipeline_uuid}')
+        task_config = pipeline.tasks[task_uuid]
 
-        task = Task.get_task_from_config(
-            pipeline.tasks[task_uuid], pipeline_uuid)
+        task: DataLoaderTask | DataSinkTask | DataTransformerTask = task_type[task_config["task_type"]](
+            **task_config)
 
         return await task.get_schema()
 
@@ -98,7 +108,9 @@ class TaskService:
                          task_uuid, pipeline_uuid)
             raise MinimalETLException(
                 f'Task - {task_uuid} not defined in pipeline - {pipeline_uuid}')
-        task = Task.get_task_from_config(pipeline.tasks[task_uuid], pipeline)
+        task_config = pipeline.tasks[task_uuid]
+        task: DataLoaderTask | DataSinkTask | DataTransformerTask = task_type[task_config["task_type"]](
+            **task_config)
 
         data = await task.records
 
@@ -184,9 +196,9 @@ class TaskService:
                 f'Task - {task_uuid} not defined in pipeline {pipeline_uuid}')
 
         _task = pipeline.tasks[task_uuid]
-
-        task = Task.get_task_from_config(_task, pipeline)
-
+        task: DataLoaderTask | DataSinkTask | DataTransformerTask = task_type[_task["task_type"]](
+            **_task)
+        task.pipeline = pipeline
         if not await request.form():
             task_config = TaskUpdateModel(**json.loads(await request.body()))
             if task_config.upstream_task_uuids is not None and task.upstream_tasks is not None:
@@ -203,20 +215,48 @@ class TaskService:
 
             if task_config.config_type is not None or task_config.config_properties is not None:
                 logger.info('Updating task config and properties')
-                task.validate_configurations(task_config.config_type,
-                                             task_config.config_properties)
+                await task.validate_configurations(task_config.config_type,  # type: ignore
+                                                   task_config.config_properties)  # type: ignore
                 await pipeline.update_node_reactflow_props(task.uuid, "type", "configuredNode")
         else:
             task_form = await request.form()
             data_file: UploadFile = task_form.get('data_file')  # type: ignore
             task_config = {'file_type': task_form.get('file_type'),
                            'file_name': data_file.filename}
-            task.validate_configurations('file', task_config)
+            await task.validate_configurations('file', task_config)
             async with aiofiles.open(os.path.join(task.pipeline.variable_dir,
                                                   task_config.get('file_name')), 'wb') as file:  # type: ignore
                 await file.write(await data_file.read())
 
-        pipeline.tasks[task_uuid] = task.base_dict_obj()
+        pipeline.tasks[task_uuid] = await task.base_dict_obj()
+        logger.info('Updating pipeline - %s', pipeline_uuid)
+        pipeline.save()
+        return await pipeline.pipeline_summary()
+
+    @staticmethod
+    async def update_columns_by_task(pipeline_uuid: str, task_uuid: str, columns) -> dict:
+        """method to update column list of task
+
+        Args:
+            pipeline_uuid (str): uuid of pipeline
+            task_uuid (str): uuid of task
+            columns (list): list of cloumns
+        """
+        pipeline = await Pipeline.get_pipeline_async(pipeline_uuid)
+        logger.info('Loading task - %s', task_uuid)
+        if not pipeline.has_task(task_uuid):
+            logger.error('Task - %s not defined in Pipeline - %s.',
+                         task_uuid, pipeline_uuid)
+            raise MinimalETLException(
+                f'Task - {task_uuid} not defined in pipeline {pipeline_uuid}')
+
+        _task = pipeline.tasks[task_uuid]
+        task: DataLoaderTask | DataSinkTask | DataTransformerTask = task_type[_task["task_type"]](
+            **_task)
+        if task.is_configured:
+            task.config["columns"] = columns
+
+        pipeline.tasks[task_uuid] = await task.base_dict_obj()
         logger.info('Updating pipeline - %s', pipeline_uuid)
         pipeline.save()
         return await pipeline.pipeline_summary()

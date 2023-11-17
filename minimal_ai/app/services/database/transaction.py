@@ -4,8 +4,7 @@ from typing import AsyncGenerator
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from minimal_ai.app.services.database.session import (CTX_SESSION,
-                                                      create_session)
+from minimal_ai.app.services.database.session import CTX_SESSION, create_session
 from minimal_ai.app.services.minimal_exception import MinimalETLException
 
 __all__ = ("transaction",)

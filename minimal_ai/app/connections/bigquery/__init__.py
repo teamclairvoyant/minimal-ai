@@ -25,8 +25,8 @@ class BigQuery(Connection):
         # print(self.path_to_creds_file)
         # os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = self.path_to_creds_file
         creds = service_account.Credentials.from_service_account_file(
-            self.path_to_creds_file, scopes=[
-                "https://www.googleapis.com/auth/cloud-platform"]
+            self.path_to_creds_file,
+            scopes=["https://www.googleapis.com/auth/cloud-platform"],
         )
         self.client = Client(credentials=creds, project=creds.project_id)
 
@@ -39,8 +39,7 @@ class BigQuery(Connection):
         connection.close()
 
     def get_information_schema(self, table_name: str | None = None) -> List[tuple]:
-        """method to get the information schema
-        """
+        """method to get the information schema"""
         query = f"""
         SELECT
             TABLE_NAME
@@ -52,7 +51,7 @@ class BigQuery(Connection):
         FROM {self.dataset}.INFORMATION_SCHEMA.COLUMNS
         """
         if table_name:
-            query = f'{query} WHERE TABLE_NAME in (\'{table_name}\')'
+            query = f"{query} WHERE TABLE_NAME in ('{table_name}')"
 
         conn = self.build_connection()
         cursor = conn.cursor()

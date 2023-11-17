@@ -1,10 +1,9 @@
 from contextvars import ContextVar
 from functools import lru_cache
 
-from sqlalchemy.engine import ResultProxy
+from sqlalchemy.engine import Result
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
-from sqlalchemy.ext.asyncio import (AsyncEngine, AsyncSession,
-                                    create_async_engine)
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 
 from minimal_ai.app.api.api_config import settings
 from minimal_ai.app.services.minimal_exception import MinimalETLException
@@ -33,9 +32,7 @@ def create_session(engine: AsyncEngine | None = None) -> AsyncSession:
     )
 
 
-CTX_SESSION: ContextVar[AsyncSession] = ContextVar(
-    "session", default=create_session()
-)
+CTX_SESSION: ContextVar[AsyncSession] = ContextVar("session", default=create_session())
 
 
 class Session:
@@ -47,7 +44,7 @@ class Session:
     def __init__(self) -> None:
         self._session: AsyncSession = CTX_SESSION.get()
 
-    async def execute(self, query) -> ResultProxy:
+    async def execute(self, query) -> Result:
         """method to execute sql query"""
         try:
             result = await self._session.execute(query)

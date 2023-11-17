@@ -7,12 +7,13 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    """Settings class which extends BaseSettings
-    """
+    """Settings class which extends BaseSettings"""
+
     API_STR: str = Field(default="/api/v1")
     SECRET_KEY: str = Field(default=secrets.token_urlsafe(32))
-    MINIMAL_AI_REPO_PATH: str = Field(default=os.path.join(
-        os.getcwd(), 'MINIMAL-AI-PROJECT'))
+    MINIMAL_AI_REPO_PATH: str = Field(
+        default=os.path.join(os.getcwd(), "MINIMAL-AI-PROJECT")
+    )
 
     @computed_field
     @property
@@ -30,7 +31,9 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: list[str] = Field(default=["http://localhost:5173"])
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
-    def assemble_cors_origins(cls, urls: Union[str, list[str]]) -> Union[list[str], str]:
+    def assemble_cors_origins(
+        cls, urls: Union[str, list[str]]
+    ) -> Union[list[str], str]:
         """method to assemble the cors origins urls
 
         Args:

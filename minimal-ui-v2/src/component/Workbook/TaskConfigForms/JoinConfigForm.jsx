@@ -34,7 +34,6 @@ JoinConfigForm.propTypes = {
 };
 
 function JoinConfigForm({ currTask }) {
-  console.log(currTask);
   const [rightOn, setRightOn] = useState([]);
   const [leftOn, setLeftOn] = useState([]);
   const filteredRight = rightItems.filter((o) => !rightOn.includes(o));

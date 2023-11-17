@@ -7,6 +7,7 @@ from typing import Tuple
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+
 # from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
 
@@ -22,8 +23,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan_event(app: FastAPI):
-    """method to control the scheduler lifespan with that of app
-    """
+    """method to control the scheduler lifespan with that of app"""
     logger.info("Initialising scheduler instance")
     scheduler = get_scheduler()
 
@@ -34,15 +34,16 @@ async def lifespan_event(app: FastAPI):
 
 
 app = FastAPI(
-    title=settings.PROJECT_NAME, openapi_url=f"{settings.API_STR}/openapi.json",
-    lifespan=lifespan_event
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_STR}/openapi.json",
+    lifespan=lifespan_event,
 )
 
 # Set all CORS enabled origins
 if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=['*'],
+        allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -53,7 +54,7 @@ class SinglePageApplication(StaticFiles):
     """Acts similar to the bripkens/connect-history-api-fallback
     NPM package."""
 
-    def __init__(self, directory: os.PathLike, index='index.html') -> None:
+    def __init__(self, directory: os.PathLike, index="index.html") -> None:
         self.index = index
 
         # set html=True to resolve the index even when no
@@ -81,20 +82,18 @@ class SinglePageApplication(StaticFiles):
 app.include_router(api_router, prefix=settings.API_STR)
 
 app.mount(
-    path='/',
-    app=SinglePageApplication(
-        directory=Path(__file__).resolve().parent/"static"),
-    name='SPA'
+    path="/",
+    app=SinglePageApplication(directory=Path(__file__).resolve().parent / "static"),
+    name="SPA",
 )
 
 
 def start():
     """
-        Launch with `poetry run start-app` at root level
+    Launch with `poetry run start-app` at root level
     """
-    uvicorn.run("minimal_ai.run_server:app",
-                host="0.0.0.0", port=4001, reload=True)
+    uvicorn.run("minimal_ai.run_server:app", host="0.0.0.0", port=4001, reload=True)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     start()

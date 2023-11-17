@@ -30,6 +30,7 @@ import { pipelineStore } from "../../appState/pipelineStore";
 import CustomNode from "./CustomNode";
 import SinkConfig from "./SinkConfig";
 import SourceConfig from "./SourceConfig";
+import SelectColumns from "./TaskConfigForms/SelectColumns";
 import TransformConfig from "./TransformConfig";
 
 //------------------------- Task Modal -------------------------
@@ -384,7 +385,7 @@ const MainFlow = ({ pipeline, setPipeline }) => {
             onNodesDelete={(node) => onNodeDelete(node)}
             onNodeDoubleClick={nodeDoubleClick}
             fitView
-            fitViewOptions={{ maxZoom: 0.8, padding: 1 }}
+            fitViewOptions={{ maxZoom: 1, padding: 1 }}
           >
             <Controls />
 
@@ -392,7 +393,7 @@ const MainFlow = ({ pipeline, setPipeline }) => {
           </ReactFlow>
         </Flex>
       </Flex>
-      {currTask && (
+      {currTask && pipeline.tasks[currTask.id].configured ? (
         <Modal
           title={
             <Typography style={{ fontSize: 20 }}>
@@ -407,14 +408,38 @@ const MainFlow = ({ pipeline, setPipeline }) => {
           // styles={{ body: { paddingTop: 20 } }}
           footer={<></>}
         >
-          {currTask.data.type === "data_loader" && (
-            <SourceConfig task={currTask} setCloseForm={setOpenTaskConfig} />
-          )}
-          {currTask.data.type === "data_transformer" && (
-            <TransformConfig task={currTask} setCloseForm={setOpenTaskConfig} />
-          )}
-          {currTask.data.type === "data_sink" && <SinkConfig task={currTask} />}
+          <SelectColumns task={currTask} setCloseForm={setOpenTaskConfig} />
         </Modal>
+      ) : (
+        currTask && (
+          <Modal
+            title={
+              <Typography style={{ fontSize: 20 }}>
+                {currTask.data.title}
+              </Typography>
+            }
+            open={openTaskConfig}
+            onCancel={() => {
+              setOpenTaskConfig(false);
+            }}
+            // style={{ minWidth: 500 }}
+            // styles={{ body: { paddingTop: 20 } }}
+            footer={<></>}
+          >
+            {currTask.data.type === "data_loader" && (
+              <SourceConfig task={currTask} setCloseForm={setOpenTaskConfig} />
+            )}
+            {currTask.data.type === "data_transformer" && (
+              <TransformConfig
+                task={currTask}
+                setCloseForm={setOpenTaskConfig}
+              />
+            )}
+            {currTask.data.type === "data_sink" && (
+              <SinkConfig task={currTask} />
+            )}
+          </Modal>
+        )
       )}
     </>
   );

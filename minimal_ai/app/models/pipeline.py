@@ -14,19 +14,31 @@ from pydantic.dataclasses import dataclass
 from pydantic.fields import Field
 
 from minimal_ai.app.api.api_config import settings
-from minimal_ai.app.entity import (PipelineExecutionEntity,
-                                   PipelineSchedulerEntity)
-from minimal_ai.app.models.task import Task
+from minimal_ai.app.entity import PipelineExecutionEntity, PipelineSchedulerEntity
+from minimal_ai.app.models._task import (
+    DataLoaderTask,
+    DataSinkTask,
+    DataTransformerTask,
+)
 from minimal_ai.app.models.variable import VariableManager
 from minimal_ai.app.services.minimal_exception import MinimalETLException
 from minimal_ai.app.services.spark_main import SparkMain
-from minimal_ai.app.utils.constants import (ICONSET, ExecutorType,
-                                            PipelineStatus,
-                                            PipelineUpdateModel)
+from minimal_ai.app.utils.constants import (
+    ICONSET,
+    ExecutorType,
+    PipelineStatus,
+    PipelineUpdateModel,
+)
 from minimal_ai.app.utils.string_utils import clean_name, format_enum
 
-METADATA_FILE = 'metadata.json'
-VARIABLE_DIR = '.variable'
+METADATA_FILE = "metadata.json"
+VARIABLE_DIR = ".variable"
+task_type = {
+    "data_loader": DataLoaderTask,
+    "data_transformer": DataTransformerTask,
+    "data_sink": DataSinkTask,
+}
+
 logger = logging.getLogger(__name__)
 
 
@@ -53,15 +65,20 @@ class Pipeline:
         Returns: None
 
         """
-        self.config = self.load_config_file(
-        ) if self.config is None else self.load_config(self.config)
+        self.config = (
+            self.load_config_file()
+            if self.config is None
+            else self.load_config(self.config)
+        )
 
     @property
     def config_dir(self):
         """
         path to config file for the pipeline
         """
-        return os.path.join(settings.MINIMAL_AI_REPO_PATH, settings.PIPELINES_DIR, self.uuid)
+        return os.path.join(
+            settings.MINIMAL_AI_REPO_PATH, settings.PIPELINES_DIR, self.uuid
+        )
 
     @property
     def variable_dir(self):
@@ -83,11 +100,10 @@ class Pipeline:
         Returns: Dict
 
         """
-        logger.info('Reading config file for pipeline %s', self.uuid)
+        logger.info("Reading config file for pipeline %s", self.uuid)
         if not os.path.exists(self.config_dir):
             logger.error("Pipeline %s doesn't exists", self.uuid)
-            raise MinimalETLException(
-                f"Pipeline - {self.uuid} doesn't exists")
+            raise MinimalETLException(f"Pipeline - {self.uuid} doesn't exists")
 
         with open(os.path.join(self.config_dir, METADATA_FILE)) as _file:
             _config = json.load(_file)
@@ -100,20 +116,21 @@ class Pipeline:
         Returns:
 
         """
-        self.name = _config.get('name')
-        self.uuid = _config.get('uuid')  # type: ignore
-        self.description = _config.get('description')
-        self.executor_type = _config.get('executor_type', 'python')
-        self.executor_config = _config.get('executor_config', {})
-        self.tasks = _config.get('tasks', {})
-        self.status = PipelineStatus(_config.get('status'))
-        self.scheduled = _config.get('scheduled', False)
+        self.name = _config.get("name")
+        self.uuid = _config.get("uuid")  # type: ignore
+        self.description = _config.get("description")
+        self.executor_type = _config.get("executor_type", "python")
+        self.executor_config = _config.get("executor_config", {})
+        self.tasks = _config.get("tasks", {})
+        self.status = PipelineStatus(_config.get("status"))
+        self.scheduled = _config.get("scheduled", False)
         self.created_at = _config.get(
-            'created_at', datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        self.created_by = _config.get('created_by', "test user")
-        self.modified_at = _config.get('modified_at')
-        self.modified_by = _config.get('modified_by')
-        self.reactflow_props = _config.get('reactflow_props', {})
+            "created_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        )
+        self.created_by = _config.get("created_by", "test user")
+        self.modified_at = _config.get("modified_at")
+        self.modified_by = _config.get("modified_by")
+        self.reactflow_props = _config.get("reactflow_props", {})
 
     def base_obj(self) -> Dict:
         """
@@ -134,21 +151,27 @@ class Pipeline:
             "created_by": self.created_by,
             "modified_at": self.modified_at,
             "modified_by": self.modified_by,
-            "reactflow_props": self.reactflow_props
+            "reactflow_props": self.reactflow_props,
         }
 
     async def pipeline_summary(self) -> Dict:
         base_data = self.base_obj()
-        base_data.update({
-            "next_run_time": await self.next_run_time(),
-            "execution_summary": await self.execution_summary_by_uuid()
-        })
+        base_data.update(
+            {
+                "next_run_time": await self.next_run_time(),
+                "execution_summary": await self.execution_summary_by_uuid(),
+            }
+        )
         return base_data
 
     @classmethod
-    def create(cls, name: str, executor_type: str = ExecutorType.PYTHON,
-               executor_config: Dict[str, str] | None = None,
-               description: str | None = None) -> 'Pipeline':
+    def create(
+        cls,
+        name: str,
+        executor_type: str = ExecutorType.PYTHON,
+        executor_config: Dict[str, str] | None = None,
+        description: str | None = None,
+    ) -> "Pipeline":
         """
         method to create object pipeline class
         Args:
@@ -160,53 +183,57 @@ class Pipeline:
         logger.info("creating pipeline %s", name)
         uuid = clean_name(name)
         pipeline_path = os.path.join(
-            settings.MINIMAL_AI_REPO_PATH, settings.PIPELINES_DIR, uuid)
+            settings.MINIMAL_AI_REPO_PATH, settings.PIPELINES_DIR, uuid
+        )
         variable_path = os.path.join(pipeline_path, VARIABLE_DIR)
 
         if os.path.exists(pipeline_path):
-            logger.error('Pipeline %s already exists.', name)
-            raise MinimalETLException(f'Pipeline - {name} already exists.')
+            logger.error("Pipeline %s already exists.", name)
+            raise MinimalETLException(f"Pipeline - {name} already exists.")
         os.makedirs(pipeline_path)
         os.makedirs(variable_path)
 
-        logger.debug('pipeline dir -> %s', pipeline_path)
-        logger.debug('variable dir -> %s', variable_path)
+        logger.debug("pipeline dir -> %s", pipeline_path)
+        logger.debug("variable dir -> %s", variable_path)
         try:
-            with open(os.path.join(pipeline_path, METADATA_FILE), 'w') as config_file:
-                json.dump({
-                    "name": name,
-                    "uuid": uuid,
-                    "description": description,
-                    "executor_type": ExecutorType(executor_type),
-                    "executor_config": executor_config if executor_config else {},
-                    "status": format_enum(PipelineStatus.DRAFT),
-                    "scheduled": False,
-                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "created_by": "test user",
-                    "reactflow_props": {
-                        "nodes": [],
-                        "edges": [],
-                        "viewport": {
-                            "x": 500,
-                            "y": 50,
-                            "zoom": 0.5
-                        }
-                    }
-                }, config_file, indent=4)
+            with open(os.path.join(pipeline_path, METADATA_FILE), "w") as config_file:
+                json.dump(
+                    {
+                        "name": name,
+                        "uuid": uuid,
+                        "description": description,
+                        "tasks": {},
+                        "executor_type": ExecutorType(executor_type),
+                        "executor_config": executor_config if executor_config else {},
+                        "status": format_enum(PipelineStatus.DRAFT),
+                        "scheduled": False,
+                        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "created_by": "test user",
+                        "reactflow_props": {
+                            "nodes": [],
+                            "edges": [],
+                            "viewport": {"x": 500, "y": 50, "zoom": 1},
+                        },
+                    },
+                    config_file,
+                    indent=4,
+                )
         except Exception as excep:
             shutil.rmtree(pipeline_path)
             logger.error(
-                "Failed to save metadata.json for pipeline - %s | %s", name, excep.args)
+                "Failed to save metadata.json for pipeline - %s | %s", name, excep.args
+            )
             raise MinimalETLException(
-                f"Failed to save metadata.json for pipeline - {name} | {excep.args}")
+                f"Failed to save metadata.json for pipeline - {name} | {excep.args}"
+            )
 
         pipeline = Pipeline(uuid=uuid)
 
         return pipeline
 
     @classmethod
-    async def get_pipeline_async(cls, uuid: str) -> 'Pipeline':
-        """ method to get pipeline object from uuid
+    async def get_pipeline_async(cls, uuid: str) -> "Pipeline":
+        """method to get pipeline object from uuid
 
         Args:
             uuid (str): uuid of pipeline
@@ -223,9 +250,9 @@ class Pipeline:
         )
 
         if not os.path.exists(config_path):
-            logger.error('Pipeline %s does not exist.', uuid)
-            raise MinimalETLException(f'Pipeline - {uuid} does not exist.')
-        async with aiofiles.open(config_path, mode='r') as config_file:
+            logger.error("Pipeline %s does not exist.", uuid)
+            raise MinimalETLException(f"Pipeline - {uuid} does not exist.")
+        async with aiofiles.open(config_path, mode="r") as config_file:
             try:
                 logger.info("Loading Pipeline %s", uuid)
                 config = json.loads(await config_file.read()) or {}
@@ -237,8 +264,8 @@ class Pipeline:
         return pipeline
 
     @classmethod
-    def get_pipeline(cls, uuid: str) -> 'Pipeline':
-        """ method to get pipeline object from uuid
+    def get_pipeline(cls, uuid: str) -> "Pipeline":
+        """method to get pipeline object from uuid
 
         Args:
             uuid (str): uuid of pipeline
@@ -255,9 +282,9 @@ class Pipeline:
         )
 
         if not os.path.exists(config_path):
-            logger.error('Pipeline %s does not exist.', uuid)
-            raise MinimalETLException(f'Pipeline - {uuid} does not exist.')
-        with open(config_path, 'r') as config_file:
+            logger.error("Pipeline %s does not exist.", uuid)
+            raise MinimalETLException(f"Pipeline - {uuid} does not exist.")
+        with open(config_path, "r") as config_file:
             try:
                 logger.info("Loading Pipeline %s", uuid)
                 config = json.load(config_file) or {}
@@ -271,7 +298,7 @@ class Pipeline:
 
     @classmethod
     def get_all_pipelines(cls) -> List:
-        """ method to fetch all the pipelines from the repo
+        """method to fetch all the pipelines from the repo
 
         Returns:
             List[pipeline]
@@ -287,7 +314,7 @@ class Pipeline:
 
     @classmethod
     def is_valid_pipeline(cls, pipeline_path) -> bool:
-        """ method to check id the pipeline is valid or not
+        """method to check id the pipeline is valid or not
 
         Args:
             pipeline_path (str): path to pipeline dir
@@ -304,15 +331,17 @@ class Pipeline:
         """method to fetch execution summary of pipelines
 
         Args:
-            db (Asyncsession): database session 
+            db (Asyncsession): database session
 
         Returns:
             Dict: summary of pipelines execution
         """
         logger.info("Fetching execution summary for the pipelines")
         summary = {}
-        summary['total_pipelines'] = len(cls.get_all_pipelines())
-        summary['execution_details'] = await PipelineExecutionEntity().get_execution_summary()
+        summary["total_pipelines"] = len(cls.get_all_pipelines())
+        summary[
+            "execution_details"
+        ] = await PipelineExecutionEntity().get_execution_summary()
 
         return summary
 
@@ -322,21 +351,18 @@ class Pipeline:
         """
         logger.info("Fetching next run time for pipeline - %s", self.uuid)
 
-        return (await PipelineSchedulerEntity().get(self.uuid))['next_run_time']
+        return (await PipelineSchedulerEntity().get(self.uuid))["next_run_time"]
 
     async def execution_summary_by_uuid(self) -> dict | None:
-        """method to get the pipeline execution summary
-        """
-        logger.info(
-            "fetching pipeline execution summary for pipeline - %s", self.uuid)
+        """method to get the pipeline execution summary"""
+        logger.info("fetching pipeline execution summary for pipeline - %s", self.uuid)
         summary = await PipelineExecutionEntity().get_execution_summary(self.uuid)
         if summary:
             return summary
         return None
 
     def delete(self):
-        """ method to delete the pipeline
-        """
+        """method to delete the pipeline"""
         logger.info("Deleting Pipeline - %s", self.uuid)
         shutil.rmtree(self.config_dir)
 
@@ -360,21 +386,19 @@ class Pipeline:
 
         EDGE = {
             "animated": True,
-            "markerEnd": {
-                "type": "arrowclosed"
-            },
+            "markerEnd": {"type": "arrowclosed"},
             "source": "",
             "sourceHandle": None,
             "target": "",
             "targetHandle": None,
-            "id": "reactflow__edge-grgrg-rgrehre"
+            "id": "reactflow__edge-source-target",
         }
 
-        EDGE['source'] = source
-        EDGE['target'] = target
-        EDGE['id'] = f"reactflow__edge-{source}-{target}"
+        EDGE["source"] = source
+        EDGE["target"] = target
+        EDGE["id"] = f"reactflow__edge-{source}-{target}"
 
-        self.reactflow_props['edges'].append(EDGE)
+        self.reactflow_props["edges"].append(EDGE)
 
     async def remove_edge_reactflow_props(self, target: str) -> None:
         """method to remove edge from reactflow props of pipeline
@@ -382,14 +406,13 @@ class Pipeline:
         Args:
             target (str): uuid of task
         """
-        logger.info(
-            "Removing edge from reactflow props of pipeline - %s", self.uuid)
+        logger.info("Removing edge from reactflow props of pipeline - %s", self.uuid)
         edges: list = []
-        if self.reactflow_props['edges']:
-            for edge in self.reactflow_props['edges']:
-                if edge['target'] != target:
+        if self.reactflow_props["edges"]:
+            for edge in self.reactflow_props["edges"]:
+                if edge["target"] != target:
                     edges.append(edge)
-        self.reactflow_props['edges'] = edges
+        self.reactflow_props["edges"] = edges
 
     async def add_node_reactflow_props(self, task) -> None:
         """method to add node to reactflow props of pipeline object
@@ -397,8 +420,7 @@ class Pipeline:
         Args:
             task
         """
-        logger.info(
-            "Adding node to reactflow props of pipeline - %s", self.uuid)
+        logger.info("Adding node to reactflow props of pipeline - %s", self.uuid)
 
         NODE = {
             "width": 124,
@@ -406,30 +428,28 @@ class Pipeline:
             "id": "",
             "sourcePosition": "right",
             "targetPosition": "left",
-            "data": {
-                "title": "",
-                "icon": "",
-                "type": ""
-            },
+            "data": {"title": "", "icon": "", "type": ""},
             "type": "draftNode",
             "position": {
-                    "x": math.floor(random.random() * 100),
-                    "y": math.floor(random.random() * 100)
+                "x": math.floor(random.random() * 100),
+                "y": math.floor(random.random() * 100),
             },
             "positionAbsolute": {
                 "x": math.floor(random.random() * 100),
-                "y": math.floor(random.random() * 100)
-            }
+                "y": math.floor(random.random() * 100),
+            },
         }
 
-        NODE['id'] = task.uuid
-        NODE['data']['title'] = task.name
-        NODE['data']['icon'] = ICONSET[task.task_type]
-        NODE['data']['type'] = task.task_type
+        NODE["id"] = task.uuid
+        NODE["data"]["title"] = task.name
+        NODE["data"]["icon"] = ICONSET[task.task_type]
+        NODE["data"]["type"] = task.task_type
 
-        self.reactflow_props['nodes'].append(NODE)
+        self.reactflow_props["nodes"].append(NODE)
 
-    async def update_node_reactflow_props(self, task_id: str, key: str, value: str) -> None:
+    async def update_node_reactflow_props(
+        self, task_id: str, key: str, value: str
+    ) -> None:
         """update node property for a task
 
         Args:
@@ -453,15 +473,14 @@ class Pipeline:
         Args:
             task_uuid (str): uuid of task
         """
-        logger.info(
-            "Removing node from reactflow props of pipeline - %s", self.uuid)
-        if self.reactflow_props['nodes']:
-            for idx, node in enumerate(self.reactflow_props['nodes']):
-                if node['id'] == task_uuid:
-                    del self.reactflow_props['nodes'][idx]
+        logger.info("Removing node from reactflow props of pipeline - %s", self.uuid)
+        if self.reactflow_props["nodes"]:
+            for idx, node in enumerate(self.reactflow_props["nodes"]):
+                if node["id"] == task_uuid:
+                    del self.reactflow_props["nodes"][idx]
 
     async def add_task(self, task, priority=None) -> None:
-        """ method to attach task to pipeline
+        """method to attach task to pipeline
 
         Args:
             task (str): uuid of task
@@ -477,24 +496,24 @@ class Pipeline:
             self.tasks = dict(task_list)
 
         await self.add_node_reactflow_props(task)
-        logger.info('Added task - %s to the pipeline', task.uuid)
+        logger.info("Added task - %s to the pipeline", task.uuid)
         # self.validate('A cycle was formed while adding a task')
 
         self.save()
 
     def save(self) -> None:
-        """ method to save current pipeline
-        """
+        """method to save current pipeline"""
         self.modified_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         pipeline_dict = self.base_obj()
         try:
-            with open(os.path.join(self.config_dir, METADATA_FILE), 'w') as file_config:
+            with open(os.path.join(self.config_dir, METADATA_FILE), "w") as file_config:
                 json.dump(pipeline_dict, file_config, indent=4)
 
-            logger.info('Pipeline - %s saved successfully', self.uuid)
+            logger.info("Pipeline - %s saved successfully", self.uuid)
         except Exception as excep:
             raise MinimalETLException(
-                f'Pipeline - {self.uuid} failed to save | {excep.args}')
+                f"Pipeline - {self.uuid} failed to save | {excep.args}"
+            )
 
     async def update(self, pipeline_config: PipelineUpdateModel) -> None:
         """method to update the pipeline
@@ -512,8 +531,7 @@ class Pipeline:
                 self.executor_config.update(pipeline_config.executor_config)
 
             if pipeline_config.executor_type is not None:
-                self.executor_type = ExecutorType(
-                    pipeline_config.executor_type)
+                self.executor_type = ExecutorType(pipeline_config.executor_type)
 
             if pipeline_config.reactflow_props is not None:
                 self.reactflow_props.clear()
@@ -522,33 +540,40 @@ class Pipeline:
             self.save()
 
         except Exception as excep:
-            logger.error("Failed to update Pipeline - %s | %s",
-                         self.name, excep.args)
+            logger.error("Failed to update Pipeline - %s | %s", self.name, excep.args)
             raise MinimalETLException(
-                f"Failed to update Pipeline - {self.name} | {excep.args}")
+                f"Failed to update Pipeline - {self.name} | {excep.args}"
+            )
 
     async def execute(self, root_tasks: List) -> dict:
-        """method to execute the pipeline
-        """
+        """method to execute the pipeline"""
         try:
+
             def create_task(task_conf: Dict):
                 async def build_and_execute():
-                    task = Task.get_task_from_config(task_conf, self)
+                    task = task_type[task_conf["task_type"]](**_task)
+
                     exec_data = await task.execute(spark)
-                    self.tasks[task_conf['uuid']] = exec_data['task']
+                    self.tasks[task_conf["uuid"]] = exec_data["task"]
 
                 return asyncio.create_task(build_and_execute())
+
             _exec = PipelineExecutionEntity()
-            exec_data = await _exec.create({"trigger": "MANUAL", "pipeline_uuid": self.uuid,
-                                            "execution_date": datetime.now(),
-                                            "status": "RUNNING"})
+            exec_data = await _exec.create(
+                {
+                    "trigger": "MANUAL",
+                    "pipeline_uuid": self.uuid,
+                    "execution_date": datetime.now(),
+                    "status": "RUNNING",
+                }
+            )
 
             if not root_tasks:
                 raise MinimalETLException(
-                    f"Execution failed for pipeline {self.uuid} - no tasks have been configured")
+                    f"Execution failed for pipeline {self.uuid} - no tasks have been configured"
+                )
 
-            spark, _ = SparkMain(
-                self.uuid, self.executor_config).start_spark()
+            spark, _ = SparkMain(self.uuid, self.executor_config).start_spark()
             task_queue = Queue()
             executed_tasks = {}
             for _task in root_tasks:
@@ -560,7 +585,7 @@ class Pipeline:
                 task_conf = self.tasks[task_uuid]
 
                 skip = False
-                for upstream_task in task_conf['upstream_tasks']:
+                for upstream_task in task_conf["upstream_tasks"]:
                     if executed_tasks.get(upstream_task) is None:
                         task_queue.put(task_uuid)
                         skip = True
@@ -568,55 +593,66 @@ class Pipeline:
                 if skip:
                     continue
 
-                upstream_tasks = [executed_tasks[uuid]
-                                  for uuid in task_conf['upstream_tasks']]
+                upstream_tasks = [
+                    executed_tasks[uuid] for uuid in task_conf["upstream_tasks"]
+                ]
                 await asyncio.gather(*upstream_tasks)
 
                 task_stat = create_task(task_conf)
                 executed_tasks[task_uuid] = task_stat
-                for downstream_task in task_conf['downstream_tasks']:
+                for downstream_task in task_conf["downstream_tasks"]:
                     if downstream_task not in executed_tasks:
                         executed_tasks[downstream_task] = None
                         task_queue.put(downstream_task)
             remaining_tasks = filter(
-                lambda task: task is not None, executed_tasks.values())
+                lambda task: task is not None, executed_tasks.values()
+            )
             await asyncio.gather(*remaining_tasks)
             spark.stop()
             self.status = PipelineStatus.EXECUTED
             self.save()
 
-            await PipelineExecutionEntity().update(key="id", value=exec_data['id'],
-                                                   payload={"status": "COMPLETED"})
+            await PipelineExecutionEntity().update(
+                key="id", value=exec_data["id"], payload={"status": "COMPLETED"}
+            )
             return await self.pipeline_summary()
         except Exception as excep:
             self.status = PipelineStatus.FAILED
             self.save()
-            logger.error("Error while executing pipeline - %s | %s",
-                         self.uuid, excep.args)
-            await PipelineExecutionEntity().update(key="id", value=exec_data['id'],  # type: ignore
-                                                   payload={"status": "FAILED"})
+            logger.error(
+                "Error while executing pipeline - %s | %s", self.uuid, excep.args
+            )
+            await PipelineExecutionEntity().update(
+                key="id",
+                value=exec_data["id"],  # type: ignore
+                payload={"status": "FAILED"},
+            )
 
             return await self.pipeline_summary()
 
     async def scheduled_execute(self, root_tasks: List) -> None:
-        """method to execute the pipeline at scheduled time
-        """
+        """method to execute the pipeline at scheduled time"""
         try:
+
             def create_task(task_conf: Dict):
                 async def build_and_execute():
-                    task = Task.get_task_from_config(task_conf, self)
+                    task = task_type[task_conf["task_type"]](**_task)
                     exec_data = await task.execute(spark)
-                    self.tasks[task_conf['uuid']] = exec_data['task']
+                    self.tasks[task_conf["uuid"]] = exec_data["task"]
 
                 return asyncio.create_task(build_and_execute())
 
             _exec = PipelineExecutionEntity()
-            exec_data = await _exec.create({"trigger": "SCHEDULED", "pipeline_uuid": self.uuid,
-                                            "execution_date": datetime.now(),
-                                            "status": "RUNNING"})
+            exec_data = await _exec.create(
+                {
+                    "trigger": "SCHEDULED",
+                    "pipeline_uuid": self.uuid,
+                    "execution_date": datetime.now(),
+                    "status": "RUNNING",
+                }
+            )
 
-            spark, _ = SparkMain(
-                self.uuid, self.executor_config).start_spark()
+            spark, _ = SparkMain(self.uuid, self.executor_config).start_spark()
             task_queue = Queue()
             executed_tasks = {}
             for _task in root_tasks:
@@ -628,7 +664,7 @@ class Pipeline:
                 task_conf = self.tasks[task_uuid]
 
                 skip = False
-                for upstream_task in task_conf['upstream_tasks']:
+                for upstream_task in task_conf["upstream_tasks"]:
                     if executed_tasks.get(upstream_task) is None:
                         task_queue.put(task_uuid)
                         skip = True
@@ -636,30 +672,37 @@ class Pipeline:
                 if skip:
                     continue
 
-                upstream_tasks = [executed_tasks[uuid]
-                                  for uuid in task_conf['upstream_tasks']]
+                upstream_tasks = [
+                    executed_tasks[uuid] for uuid in task_conf["upstream_tasks"]
+                ]
                 await asyncio.gather(*upstream_tasks)
 
                 task_stat = create_task(task_conf)
                 executed_tasks[task_uuid] = task_stat
-                for downstream_task in task_conf['downstream_tasks']:
+                for downstream_task in task_conf["downstream_tasks"]:
                     if downstream_task not in executed_tasks:
                         executed_tasks[downstream_task] = None
                         task_queue.put(downstream_task)
             remaining_tasks = filter(
-                lambda task: task is not None, executed_tasks.values())
+                lambda task: task is not None, executed_tasks.values()
+            )
             await asyncio.gather(*remaining_tasks)
             spark.stop()
             self.status = PipelineStatus.EXECUTED
             self.save()
-            await PipelineExecutionEntity().update(key="id", value=exec_data['id'],
-                                                   payload={"status": "COMPLETED"})
+            await PipelineExecutionEntity().update(
+                key="id", value=exec_data["id"], payload={"status": "COMPLETED"}
+            )
 
         except Exception as excep:
             self.status = PipelineStatus.FAILED
             self.save()
-            await PipelineExecutionEntity().update(key="id", value=exec_data['id'],  # type: ignore
-                                                   payload={"status": "FAILED"})
+            await PipelineExecutionEntity().update(
+                key="id",
+                value=exec_data["id"],  # type: ignore
+                payload={"status": "FAILED"},
+            )
 
             raise MinimalETLException(
-                f'Pipeline - {self.uuid} failed to execute | {excep.args}')
+                f"Pipeline - {self.uuid} failed to execute | {excep.args}"
+            )

@@ -3,8 +3,7 @@ from typing import Any, Callable
 
 from pydantic import BaseModel, ConfigDict
 
-_json_encoders: dict[Any, Callable[[Any], Any]] = {
-}
+_json_encoders: dict[Any, Callable[[Any], Any]] = {}
 
 
 def to_camelcase(string: str) -> str:

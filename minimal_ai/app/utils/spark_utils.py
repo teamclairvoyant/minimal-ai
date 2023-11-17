@@ -17,8 +17,11 @@ class DataframeUtils:
     """
     Collection of methods related to spark dataframe
     """
+
     @staticmethod
-    async def get_df_from_alias(spark: SparkSession, alias: str, _filter: str | None = None) -> DataFrame:
+    async def get_df_from_alias(
+        spark: SparkSession, alias: str, _filter: str | None = None
+    ) -> DataFrame:
         """
         Method to get the dataframe from the alias name
         @param spark: SparkSession name

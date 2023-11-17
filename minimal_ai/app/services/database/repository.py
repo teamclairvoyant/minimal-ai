@@ -24,7 +24,8 @@ class BaseRepository(Session, Generic[ConcreteTable]):
 
         if not self.schema_class:
             raise MinimalETLException(
-                "Can not initiate the class without schema_class attribute")
+                "Can not initiate the class without schema_class attribute"
+            )
 
     async def _update(
         self, key: str, value: Any, payload: dict[str, Any]
@@ -112,7 +113,5 @@ class BaseRepository(Session, Generic[ConcreteTable]):
 
     async def delete(self, id_: int) -> None:
         """method to delete object from table"""
-        await self.execute(
-            delete(self.schema_class).where(self.schema_class.id == id_)
-        )
+        await self.execute(delete(self.schema_class).where(self.schema_class.id == id_))
         await self._session.flush()

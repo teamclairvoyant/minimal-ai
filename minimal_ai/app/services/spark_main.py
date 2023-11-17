@@ -16,11 +16,13 @@ class SparkMain:
     """
     Class containing method to start the Spark Session.
     """
+
     app_name: str
     config: Dict
 
-    def start_spark(self, master='local[*]', jar_packages=[],
-                    files=[], spark_config={}) -> Any:
+    def start_spark(
+        self, master="local[*]", jar_packages=[], files=[], spark_config={}
+    ) -> Any:
         """Start Spark session, get Spark logger and load config files.
         Start a Spark session on the worker node and register the Spark
         application with the cluster. Note, that only the app_name argument
@@ -58,31 +60,25 @@ class SparkMain:
         """
 
         # detect execution environment
-        flag_repl = not hasattr(__main__, '__file__')
-        flag_debug = 'DEBUG' in environ
-        logger.info(
-            "Starting spark session -> %s", self.app_name)
+        flag_repl = not hasattr(__main__, "__file__")
+        flag_debug = "DEBUG" in environ
+        logger.info("Starting spark session -> %s", self.app_name)
         if not (flag_repl or flag_debug):
             # get Spark session factory
-            spark_builder = (
-                SparkSession
-                .builder
-                .appName(self.app_name))  # type: ignore
+            spark_builder = SparkSession.builder.appName(self.app_name)  # type: ignore
         else:
             # get Spark session factory
-            spark_builder = (
-                SparkSession
-                .builder
-                .master(master)  # type: ignore
-                .appName(self.app_name))
+            spark_builder = SparkSession.builder.master(master).appName(  # type: ignore
+                self.app_name
+            )
 
             # create Spark JAR packages string
-            spark_jars_packages = ','.join(list(jar_packages))
-            spark_builder.config('spark.jars.packages', spark_jars_packages)
+            spark_jars_packages = ",".join(list(jar_packages))
+            spark_builder.config("spark.jars.packages", spark_jars_packages)
             # spark_builder.config('spark.driver.bindAddress', "127.0.0.1")
 
-            spark_files = ','.join(list(files))
-            spark_builder.config('spark.files', spark_files)
+            spark_files = ",".join(list(files))
+            spark_builder.config("spark.files", spark_files)
 
             # add other config params
             for key, val in spark_config.items():
@@ -93,17 +89,19 @@ class SparkMain:
 
         # get config file if sent to cluster with --files
         spark_files_dir = SparkFiles.getRootDirectory()
-        config_files = [filename
-                        for filename in listdir(spark_files_dir)
-                        if filename.endswith('config.json')]
+        config_files = [
+            filename
+            for filename in listdir(spark_files_dir)
+            if filename.endswith("config.json")
+        ]
 
         if config_files:
             path_to_config_file = path.join(spark_files_dir, config_files[0])
-            with open(path_to_config_file, 'r') as config_file:
+            with open(path_to_config_file, "r") as config_file:
                 config_dict = json.load(config_file)
-            logger.info('loaded config from - %s', config_files[0])
+            logger.info("loaded config from - %s", config_files[0])
         else:
-            logger.info('no extra config file were provided')
+            logger.info("no extra config file were provided")
             config_dict = None
 
         return spark_sess, config_dict

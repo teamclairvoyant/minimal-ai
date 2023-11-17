@@ -20,9 +20,9 @@ class PipelineExecutionSchema(BaseModel):
     trigger: str
     pipeline_uuid: str
     execution_date: datetime
-    status:  str
+    status: str
 
-    @field_serializer('execution_date')
+    @field_serializer("execution_date")
     def serialize_dt(self, execution_date: datetime):
         return execution_date.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -35,10 +35,7 @@ class PipelineExecutionEntity(BaseRepository[PipelineExecution]):
             yield PipelineExecutionSchema(**instance.__dict__).model_dump()
 
     async def get(self, id_: int):
-        query = (
-            select(PipelineExecution)
-            .where(getattr(self.schema_class, "id") == id_)
-        )
+        query = select(PipelineExecution).where(getattr(self.schema_class, "id") == id_)
 
         result: Result = await self.execute(query)
 
@@ -48,7 +45,7 @@ class PipelineExecutionEntity(BaseRepository[PipelineExecution]):
                 "trigger": None,
                 "pipeline_uuid": None,
                 "execution_date": None,
-                "status": None
+                "status": None,
             }
 
         return PipelineExecutionSchema(**instance.__dict__).model_dump()
@@ -61,14 +58,19 @@ class PipelineExecutionEntity(BaseRepository[PipelineExecution]):
         instance = await self._update(key, value, payload)
         return PipelineExecutionSchema(**instance.__dict__).model_dump()
 
-    async def get_execution_summary(self, pipeline_uuid: str | None = None) -> Dict[str, int]:
+    async def get_execution_summary(
+        self, pipeline_uuid: str | None = None
+    ) -> Dict[str, int]:
         try:
-            _select = select(self.schema_class.status, func.count(
-                self.schema_class.status).label("total"))
+            _select = select(
+                self.schema_class.status,
+                func.count(self.schema_class.status).label("total"),
+            )
 
             if pipeline_uuid:
                 _select = _select.where(
-                    self.schema_class.pipeline_uuid == pipeline_uuid)
+                    self.schema_class.pipeline_uuid == pipeline_uuid
+                )
 
             _select = _select.group_by(self.schema_class.status)
 
@@ -83,12 +85,7 @@ class PipelineExecutionEntity(BaseRepository[PipelineExecution]):
                 "COMPLETED": data.get("COMPLETED", 0),
                 "FAILED": data.get("FAILED", 0),
                 "RUNNING": data.get("RUNNING", 0),
-                "CANCELLED": data.get("CANCELLED", 0)
+                "CANCELLED": data.get("CANCELLED", 0),
             }
         except NoResultFound:
-            return {
-                "COMPLETED": 0,
-                "FAILED": 0,
-                "RUNNING": 0,
-                "CANCELLED": 0
-            }
+            return {"COMPLETED": 0, "FAILED": 0, "RUNNING": 0, "CANCELLED": 0}

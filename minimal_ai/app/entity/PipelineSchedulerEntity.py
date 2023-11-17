@@ -18,7 +18,7 @@ class PipelineSchedulerSchema(BaseModel):
     id: str
     next_run_time: float
 
-    @field_serializer('next_run_time')
+    @field_serializer("next_run_time")
     def serialize_dt(self, next_run_time: float):
         return datetime.fromtimestamp(next_run_time).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -31,10 +31,7 @@ class PipelineSchedulerEntity(BaseRepository[PipelineScheduler]):
             yield PipelineSchedulerSchema(**instance.__dict__).model_dump()
 
     async def get(self, id_: str):
-        query = (
-            select(PipelineScheduler)
-            .where(getattr(self.schema_class, "id") == id_)
-        )
+        query = select(PipelineScheduler).where(getattr(self.schema_class, "id") == id_)
 
         result: Result = await self.execute(query)
         if not (instance := result.scalars().one_or_none()):

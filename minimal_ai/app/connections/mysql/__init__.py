@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 class ConnMethod(str, enum.Enum):
-    DIRECT = 'direct'
-    SSH_TUNNEL = 'ssh_tnnel'
+    DIRECT = "direct"
+    SSH_TUNNEL = "ssh_tnnel"
 
 
 @dataclass
@@ -42,24 +42,24 @@ class MySql(Connection):
             ssh_setting = dict(ssh_username=self.ssh_username)
             if self.ssh_key_path is not None:
                 if os.path.exists(self.ssh_key_path):
-                    ssh_setting['ssh_key'] = self.ssh_key_path
+                    ssh_setting["ssh_key"] = self.ssh_key_path
                 else:
-                    ssh_setting['ssh_key'] = paramiko.RSAKey.from_private_key(  # type: ignore
+                    ssh_setting["ssh_key"] = paramiko.RSAKey.from_private_key(  # type: ignore
                         io.StringIO(self.ssh_key_path),
                     )
             else:
-                ssh_setting['ssh_password'] = self.ssh_password
+                ssh_setting["ssh_password"] = self.ssh_password
 
             self.ssh_tunnel = SSHTunnelForwarder(
                 (self.ssh_host, self.ssh_port),
                 remote_bind_address=(self.host, self.port),
-                local_bind_address=('', self.port),
+                local_bind_address=("", self.port),
                 **ssh_setting,  # type: ignore
             )
             self.ssh_tunnel.start()
             self.ssh_tunnel._check_is_started()
 
-            host = '127.0.0.1'
+            host = "127.0.0.1"
             port = self.ssh_tunnel.local_bind_port
 
         return connect(
@@ -78,8 +78,7 @@ class MySql(Connection):
             self.ssh_tunnel = None
 
     def get_information_schema(self, table_name: str | None = None) -> List[dict]:
-        """method to get the information schema
-        """
+        """method to get the information schema"""
         query = f"""
         SELECT
             TABLE_NAME
@@ -92,6 +91,6 @@ class MySql(Connection):
         WHERE table_schema = '{self.database}'
         """
         if table_name:
-            query = f'{query} AND TABLE_NAME in (\'{table_name}\')'
+            query = f"{query} AND TABLE_NAME in ('{table_name}')"
 
         return self.execute(query)

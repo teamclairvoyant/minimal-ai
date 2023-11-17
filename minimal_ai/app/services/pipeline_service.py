@@ -11,11 +11,13 @@ logger = logging.getLogger(__name__)
 
 
 class PipelineService:
-
     @staticmethod
-    async def create_pipeline(name: str, executor_type: str,
-                              executor_config: Dict[str, str] | None,
-                              description: str | None) -> Dict:
+    async def create_pipeline(
+        name: str,
+        executor_type: str,
+        executor_config: Dict[str, str] | None,
+        description: str | None,
+    ) -> Dict:
         """method to create the pipeline
 
         Args:
@@ -26,8 +28,7 @@ class PipelineService:
         Returns:
             Dict: created pipeline object
         """
-        pipeline = Pipeline.create(
-            name, executor_type, executor_config, description)
+        pipeline = Pipeline.create(name, executor_type, executor_config, description)
         logger.info("Pipeline - %s created", name)
         return await pipeline.pipeline_summary()
 
@@ -80,8 +81,7 @@ class PipelineService:
 
     @staticmethod
     async def get_all_pipelines_from_repo() -> List[Dict]:
-        """method to fetch list of pipelines
-        """
+        """method to fetch list of pipelines"""
 
         pipeline_uuids = Pipeline.get_all_pipelines()
 
@@ -94,14 +94,16 @@ class PipelineService:
         )
 
         pipelines = [
-            await pipeline.pipeline_summary() for pipeline in _pipelines if pipeline is not None]
+            await pipeline.pipeline_summary()
+            for pipeline in _pipelines
+            if pipeline is not None
+        ]
 
         return pipelines
 
     @staticmethod
     async def get_pipelines_summary() -> Dict[Any, Any]:
-        """method to get summary of pipelines
-        """
+        """method to get summary of pipelines"""
         summary = await Pipeline.summary()
         return summary
 
@@ -117,7 +119,7 @@ class PipelineService:
         logger.info("Loading data sources...")
 
         for task in pipeline.tasks:
-            if pipeline.tasks[task]['task_type'] == TaskType.DATA_LOADER:
+            if pipeline.tasks[task]["task_type"] == TaskType.DATA_LOADER:
                 root_tasks.append(task)
 
         exec_data = await pipeline.execute(root_tasks)
@@ -138,7 +140,7 @@ class PipelineService:
         logger.info("Loading data sources...")
 
         for task in pipeline.tasks:
-            if pipeline.tasks[task]['task_type'] == TaskType.DATA_LOADER:
+            if pipeline.tasks[task]["task_type"] == TaskType.DATA_LOADER:
                 root_tasks.append(task)
 
         asyncio.run(pipeline.scheduled_execute(root_tasks))
@@ -154,6 +156,8 @@ class PipelineService:
             cron_time (_type_): execution time in cron expression
         """
         pipeline = await Pipeline.get_pipeline_async(pipeline_uuid)
-        await schedule_pipeline(pipeline_uuid, cron_time, PipelineService.scheduled_execution)
+        await schedule_pipeline(
+            pipeline_uuid, cron_time, PipelineService.scheduled_execution
+        )
         pipeline.scheduled = True
         pipeline.save()

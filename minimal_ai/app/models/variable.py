@@ -18,7 +18,7 @@ class VariableManager:
     variables_dir: str
 
     @classmethod
-    def get_manager(cls, variables_dir: str) -> 'VariableManager':
+    def get_manager(cls, variables_dir: str) -> "VariableManager":
         """
         method to get variable manager object
         Args:
@@ -30,11 +30,7 @@ class VariableManager:
         return VariableManager(variables_dir=variables_dir)
 
     async def add_variable(
-            self,
-            pipeline_uuid: str,
-            task_uuid: str,
-            variable_uuid: str,
-            data: Any
+        self, pipeline_uuid: str, task_uuid: str, variable_uuid: str, data: Any
     ) -> None:
         """
         method to add variable and store data
@@ -50,17 +46,14 @@ class VariableManager:
             uuid=clean_name(variable_uuid),
             pipeline_uuid=pipeline_uuid,
             task_uuid=task_uuid,
-            data=data
+            data=data,
         )
         # Delete data if it exists
         variable.delete(self.variables_dir)
 
         variable.save(self.variables_dir)
 
-    async def delete_variable(
-            self,
-            variable_uuid: str
-    ) -> None:
+    async def delete_variable(self, variable_uuid: str) -> None:
         """
         method to delete variable
         Args:
@@ -73,10 +66,7 @@ class VariableManager:
 
         variable.delete(self.variables_dir)
 
-    async def get_variable_data(
-            self,
-            variable_uuid: str
-    ) -> List:
+    async def get_variable_data(self, variable_uuid: str) -> List:
         """
         method to get variable object
         Args:
@@ -88,9 +78,8 @@ class VariableManager:
         variable = await Variable.get(self.variables_dir, variable_uuid)
 
         if not variable:
-            logger.error('Variable - %s not loaded properly', variable_uuid)
-            raise MinimalETLException(
-                f'Variable - {variable_uuid} not loaded properly')
+            logger.error("Variable - %s not loaded properly", variable_uuid)
+            raise MinimalETLException(f"Variable - {variable_uuid} not loaded properly")
 
         return [json.loads(i) for i in variable.data]
 
@@ -107,7 +96,7 @@ class Variable:
     data: Any
 
     @classmethod
-    async def get(cls, variable_dir: str, uuid: str) -> 'Variable':
+    async def get(cls, variable_dir: str, uuid: str) -> "Variable":
         """
         method to get the saved variable
         Args:
@@ -118,11 +107,10 @@ class Variable:
         """
         variable_path = os.path.join(variable_dir, uuid)
         if not os.path.exists(variable_path):
-            logger.error('Variable - %s does not exists', variable_path)
-            raise MinimalETLException(
-                f'Variable - {variable_path} does not exist')
+            logger.error("Variable - %s does not exists", variable_path)
+            raise MinimalETLException(f"Variable - {variable_path} does not exist")
 
-        async with aiofiles.open(variable_path, mode='rb') as pickle_file:
+        async with aiofiles.open(variable_path, mode="rb") as pickle_file:
             variable = pickle.loads(await pickle_file.read())
 
         return variable
@@ -136,10 +124,9 @@ class Variable:
         """
         if not os.path.exists(variable_dir):
             logger.error("Variable path - %s doesn't exist", variable_dir)
-            raise MinimalETLException(
-                f"Variable path - {variable_dir} doesn't exist")
+            raise MinimalETLException(f"Variable path - {variable_dir} doesn't exist")
 
-        with open(os.path.join(variable_dir, self.uuid), 'wb') as pickle_file:
+        with open(os.path.join(variable_dir, self.uuid), "wb") as pickle_file:
             pickle.dump(self, pickle_file)
 
     def delete(self, variable_dir: str):
@@ -152,6 +139,5 @@ class Variable:
         variable_path = os.path.join(variable_dir, self.uuid)
 
         if os.path.exists(variable_path):
-            logger.info("Deleting variable for pipeline - %s.",
-                        self.pipeline_uuid)
+            logger.info("Deleting variable for pipeline - %s.", self.pipeline_uuid)
             os.remove(variable_path)
