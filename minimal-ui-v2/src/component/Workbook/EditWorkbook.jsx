@@ -1,7 +1,9 @@
+import { CloseOutlined, SettingOutlined } from "@ant-design/icons";
 import { Icon } from "@iconify/react";
 import {
   Button,
   Col,
+  Drawer,
   Flex,
   Form,
   Input,
@@ -25,14 +27,13 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { backendApi } from "../../../../minimal-ui/src/api/api";
-// import { formatNodeName } from '../../../../minimal-ui/src/utils/formatString';
-import { pipelineStore } from "../../appState/pipelineStore";
-import CustomNode from "./CustomNode";
-import SinkConfig from "./SinkConfig";
-import SourceConfig from "./SourceConfig";
-import SelectColumns from "./TaskConfigForms/SelectColumns";
-import TransformConfig from "./TransformConfig";
 
+import { pipelineStore } from "../../appState/pipelineStore";
+import { taskStore } from "../../appState/taskStore";
+import CustomNode from "./CustomNode";
+import SinkNodeConfig from "./SinkNodeConfig";
+import SorceNodeConfig from "./SourceNodeConfig";
+import TransformNodeConfig from "./TransformNodeConfig";
 //------------------------- Task Modal -------------------------
 NewTaskForm.propTypes = {
   closeModal: propTypes.func,
@@ -259,8 +260,9 @@ const MainFlow = ({ pipeline, setPipeline }) => {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [rfInstance, setRfInstance] = useState(null);
   const { setViewport } = useReactFlow();
-  const [currTask, setCurrTask] = useState();
+  const [currTask, setCurrTask] = useState(null);
   const [openTaskConfig, setOpenTaskConfig] = useState(false);
+  const [, { setTask }] = taskStore();
 
   useEffect(() => {
     if (pipeline.reactflow_props) {
@@ -302,7 +304,8 @@ const MainFlow = ({ pipeline, setPipeline }) => {
 
   function nodeDoubleClick(event, node) {
     setCurrTask(node);
-    setOpenTaskConfig(!openTaskConfig);
+    setTask(node);
+    setOpenTaskConfig(true);
   }
 
   const onSave = async () => {
@@ -393,53 +396,53 @@ const MainFlow = ({ pipeline, setPipeline }) => {
           </ReactFlow>
         </Flex>
       </Flex>
-      {currTask && pipeline.tasks[currTask.id].configured ? (
-        <Modal
+      {currTask && (
+        <Drawer
           title={
-            <Typography style={{ fontSize: 20 }}>
-              {currTask.data.title}
-            </Typography>
+            <Space size={60}>
+              <Button
+                shape="circle"
+                type="text"
+                icon={<CloseOutlined />}
+                onClick={() => {
+                  setCurrTask(null);
+                  setOpenTaskConfig(false);
+                }}
+              ></Button>
+              <Space size="middle">
+                <Typography.Text style={{ fontSize: 15, color: "#bfbfbf" }}>
+                  {currTask.id}
+                </Typography.Text>
+                <SettingOutlined />
+              </Space>
+            </Space>
           }
-          open={openTaskConfig}
-          onCancel={() => {
+          closeIcon={false}
+          placement={"right"}
+          width={"90%"}
+          onClose={() => {
+            setCurrTask(null);
             setOpenTaskConfig(false);
           }}
-          // style={{ minWidth: 500 }}
-          // styles={{ body: { paddingTop: 20 } }}
-          footer={<></>}
+          open={openTaskConfig}
+          styles={{
+            content: {
+              borderRadius: "40px 0 0 40px",
+            },
+            header: { borderBottomWidth: 0 },
+          }}
+          destroyOnClose={true}
         >
-          <SelectColumns task={currTask} setCloseForm={setOpenTaskConfig} />
-        </Modal>
-      ) : (
-        currTask && (
-          <Modal
-            title={
-              <Typography style={{ fontSize: 20 }}>
-                {currTask.data.title}
-              </Typography>
-            }
-            open={openTaskConfig}
-            onCancel={() => {
-              setOpenTaskConfig(false);
-            }}
-            // style={{ minWidth: 500 }}
-            // styles={{ body: { paddingTop: 20 } }}
-            footer={<></>}
-          >
-            {currTask.data.type === "data_loader" && (
-              <SourceConfig task={currTask} setCloseForm={setOpenTaskConfig} />
-            )}
-            {currTask.data.type === "data_transformer" && (
-              <TransformConfig
-                task={currTask}
-                setCloseForm={setOpenTaskConfig}
-              />
-            )}
-            {currTask.data.type === "data_sink" && (
-              <SinkConfig task={currTask} />
-            )}
-          </Modal>
-        )
+          {currTask.data.type === "data_loader" && (
+            <SorceNodeConfig setOpenTaskConfig={setOpenTaskConfig} />
+          )}
+          {currTask.data.type === "data_transformer" && (
+            <TransformNodeConfig setOpenTaskConfig={setOpenTaskConfig} />
+          )}
+          {currTask.data.type === "data_sink" && (
+            <SinkNodeConfig setOpenTaskConfig={setOpenTaskConfig} />
+          )}
+        </Drawer>
       )}
     </>
   );

@@ -1,0 +1,32 @@
+from pyspark.sql import SparkSession
+
+from Tasks import *
+
+
+def pipelineGraph(spark: SparkSession) -> None:
+    """Method to execute pipeline's tasks
+
+    Args:
+        spark (str): SparkSession for this pipeline
+    """
+{% if code %}
+{{ code }}
+{% else %}
+    pass
+{% endif %}
+
+
+def main():
+    """Method to trigger the pipeline execution
+    """
+    spark = (
+        SparkSession.builder.enableHiveSupport()
+        .appName("{{ app_name }}")
+        .getOrCreate()
+        .newSession())
+
+    pipelineGraph(spark)
+
+
+if __name__ == "__main__":
+    main()

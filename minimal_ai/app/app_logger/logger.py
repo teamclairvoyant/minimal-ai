@@ -19,7 +19,7 @@ def setup_logging(log_dir: str):
                 "handlers": ["debug_console_handler", "info_rotating_file_handler"],
             },
             "src": {
-                "level": "DEBUG",
+                "level": "INFO",
                 "propagate": False,
                 "handlers": ["info_rotating_file_handler", "debug_console_handler"],
             },

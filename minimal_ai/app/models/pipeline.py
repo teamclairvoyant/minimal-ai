@@ -21,7 +21,12 @@ from minimal_ai.app.models._task import (
     DataTransformerTask,
 )
 from minimal_ai.app.models.variable import VariableManager
-from minimal_ai.app.services.minimal_exception import MinimalETLException
+from minimal_ai.app.pipeline_templates.utils import (
+    copy_template,
+    fetch_template,
+    generate_pipeline_graph,
+    generate_tasks_import,
+)
 from minimal_ai.app.services.spark_main import SparkMain
 from minimal_ai.app.utils.constants import (
     ICONSET,
@@ -103,7 +108,7 @@ class Pipeline:
         logger.info("Reading config file for pipeline %s", self.uuid)
         if not os.path.exists(self.config_dir):
             logger.error("Pipeline %s doesn't exists", self.uuid)
-            raise MinimalETLException(f"Pipeline - {self.uuid} doesn't exists")
+            raise IOError(f"Pipeline - {self.uuid} doesn't exists")
 
         with open(os.path.join(self.config_dir, METADATA_FILE)) as _file:
             _config = json.load(_file)
@@ -165,7 +170,7 @@ class Pipeline:
         return base_data
 
     @classmethod
-    def create(
+    async def create(
         cls,
         name: str,
         executor_type: str = ExecutorType.PYTHON,
@@ -189,13 +194,17 @@ class Pipeline:
 
         if os.path.exists(pipeline_path):
             logger.error("Pipeline %s already exists.", name)
-            raise MinimalETLException(f"Pipeline - {name} already exists.")
-        os.makedirs(pipeline_path)
-        os.makedirs(variable_path)
+            raise IOError(f"Pipeline - {name} already exists.")
+
+        copy_template("pipeline", pipeline_path)
 
         logger.debug("pipeline dir -> %s", pipeline_path)
         logger.debug("variable dir -> %s", variable_path)
         try:
+            pipeline_template = fetch_template("main.jinja")
+            rendered_code = pipeline_template.render(code="", app_name=uuid)
+            with open(os.path.join(pipeline_path, "main.py"), mode="w") as py_file:
+                py_file.write(rendered_code)
             with open(os.path.join(pipeline_path, METADATA_FILE), "w") as config_file:
                 json.dump(
                     {
@@ -223,7 +232,7 @@ class Pipeline:
             logger.error(
                 "Failed to save metadata.json for pipeline - %s | %s", name, excep.args
             )
-            raise MinimalETLException(
+            raise IOError(
                 f"Failed to save metadata.json for pipeline - {name} | {excep.args}"
             )
 
@@ -251,7 +260,7 @@ class Pipeline:
 
         if not os.path.exists(config_path):
             logger.error("Pipeline %s does not exist.", uuid)
-            raise MinimalETLException(f"Pipeline - {uuid} does not exist.")
+            raise IOError(f"Pipeline - {uuid} does not exist.")
         async with aiofiles.open(config_path, mode="r") as config_file:
             try:
                 logger.info("Loading Pipeline %s", uuid)
@@ -283,7 +292,7 @@ class Pipeline:
 
         if not os.path.exists(config_path):
             logger.error("Pipeline %s does not exist.", uuid)
-            raise MinimalETLException(f"Pipeline - {uuid} does not exist.")
+            raise IOError(f"Pipeline - {uuid} does not exist.")
         with open(config_path, "r") as config_file:
             try:
                 logger.info("Loading Pipeline %s", uuid)
@@ -460,7 +469,7 @@ class Pipeline:
         logger.info("Updating node property for - %s", task_id)
         if not self.reactflow_props["nodes"]:
             logger.error("Reactflow prop empty")
-            raise MinimalETLException("Reactflow prop is empty")
+            raise ValueError("Reactflow prop is empty")
 
         for idx, node in enumerate(self.reactflow_props["nodes"]):
             if node["id"] == task_id:
@@ -499,21 +508,36 @@ class Pipeline:
         logger.info("Added task - %s to the pipeline", task.uuid)
         # self.validate('A cycle was formed while adding a task')
 
-        self.save()
+        await self.save()
 
-    def save(self) -> None:
+    async def save(self) -> None:
         """method to save current pipeline"""
         self.modified_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        pipeline_dict = self.base_obj()
+        pipeline_dict = json.dumps(self.base_obj(), indent=4)
         try:
-            with open(os.path.join(self.config_dir, METADATA_FILE), "w") as file_config:
-                json.dump(pipeline_dict, file_config, indent=4)
+            if self.tasks:
+                async with aiofiles.open(
+                    os.path.join(self.config_dir, "main.py"), mode="w"
+                ) as py_file:
+                    generated_code = generate_pipeline_graph(self.tasks)
+                    await py_file.write(
+                        fetch_template("main.jinja").render(
+                            code=generated_code, app_name=self.uuid
+                        )
+                    )
+                async with aiofiles.open(
+                    os.path.join(self.config_dir, "Tasks", "__init__.py"), mode="w"
+                ) as py_file:
+                    genrated_code = generate_tasks_import(list(self.tasks.keys()))
+                    await py_file.write(genrated_code)
+            async with aiofiles.open(
+                os.path.join(self.config_dir, METADATA_FILE), mode="w"
+            ) as file_config:
+                await file_config.write(pipeline_dict)
 
             logger.info("Pipeline - %s saved successfully", self.uuid)
         except Exception as excep:
-            raise MinimalETLException(
-                f"Pipeline - {self.uuid} failed to save | {excep.args}"
-            )
+            raise IOError(f"Pipeline - {self.uuid} failed to save | {excep.args}")
 
     async def update(self, pipeline_config: PipelineUpdateModel) -> None:
         """method to update the pipeline
@@ -537,13 +561,11 @@ class Pipeline:
                 self.reactflow_props.clear()
                 self.reactflow_props.update(pipeline_config.reactflow_props)
 
-            self.save()
+            await self.save()
 
         except Exception as excep:
             logger.error("Failed to update Pipeline - %s | %s", self.name, excep.args)
-            raise MinimalETLException(
-                f"Failed to update Pipeline - {self.name} | {excep.args}"
-            )
+            raise IOError(f"Failed to update Pipeline - {self.name} | {excep.args}")
 
     async def execute(self, root_tasks: List) -> dict:
         """method to execute the pipeline"""
@@ -551,10 +573,10 @@ class Pipeline:
 
             def create_task(task_conf: Dict):
                 async def build_and_execute():
-                    task = task_type[task_conf["task_type"]](**_task)
-
+                    task = task_type[task_conf["task_type"]](**task_conf)
+                    task.pipeline = self
                     exec_data = await task.execute(spark)
-                    self.tasks[task_conf["uuid"]] = exec_data["task"]
+                    self.tasks[task_conf["uuid"]] = exec_data
 
                 return asyncio.create_task(build_and_execute())
 
@@ -569,7 +591,7 @@ class Pipeline:
             )
 
             if not root_tasks:
-                raise MinimalETLException(
+                raise ValueError(
                     f"Execution failed for pipeline {self.uuid} - no tasks have been configured"
                 )
 
@@ -610,7 +632,7 @@ class Pipeline:
             await asyncio.gather(*remaining_tasks)
             spark.stop()
             self.status = PipelineStatus.EXECUTED
-            self.save()
+            await self.save()
 
             await PipelineExecutionEntity().update(
                 key="id", value=exec_data["id"], payload={"status": "COMPLETED"}
@@ -618,7 +640,7 @@ class Pipeline:
             return await self.pipeline_summary()
         except Exception as excep:
             self.status = PipelineStatus.FAILED
-            self.save()
+            await self.save()
             logger.error(
                 "Error while executing pipeline - %s | %s", self.uuid, excep.args
             )
@@ -636,7 +658,8 @@ class Pipeline:
 
             def create_task(task_conf: Dict):
                 async def build_and_execute():
-                    task = task_type[task_conf["task_type"]](**_task)
+                    task = task_type[task_conf["task_type"]](**task_conf)
+                    task.pipeline = self
                     exec_data = await task.execute(spark)
                     self.tasks[task_conf["uuid"]] = exec_data["task"]
 
@@ -689,20 +712,16 @@ class Pipeline:
             await asyncio.gather(*remaining_tasks)
             spark.stop()
             self.status = PipelineStatus.EXECUTED
-            self.save()
+            await self.save()
             await PipelineExecutionEntity().update(
                 key="id", value=exec_data["id"], payload={"status": "COMPLETED"}
             )
 
-        except Exception as excep:
+        except Exception:
             self.status = PipelineStatus.FAILED
-            self.save()
+            await self.save()
             await PipelineExecutionEntity().update(
                 key="id",
                 value=exec_data["id"],  # type: ignore
                 payload={"status": "FAILED"},
-            )
-
-            raise MinimalETLException(
-                f"Pipeline - {self.uuid} failed to execute | {excep.args}"
             )

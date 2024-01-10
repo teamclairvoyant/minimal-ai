@@ -98,11 +98,26 @@ body {
   font-weight: 500;
   letter-spacing: -0.2px;
   font-size: 10px;
-  background: #eee;
-  border: 3px solid #858585;
-  color: #858585;
+  background: #000000;
+  border: 1px solid transparent;
+  border-radius: 25px;
+  background: linear-gradient(rgb(0, 0, 0), rgb(0, 0, 0)) padding-box,
+              linear-gradient(to right, #f4f4f4, #858585) border-box;
+  color: #ffffff;
   border-radius: 15px;
   text-align: center;
+}
+
+.react-flow__node-draftNode::before {
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  width: 30px;
+  height: 30px;
+  border-radius: 25px;
+  border: 1px solid #858585;
+  background: #000000;
+  content: "";
 }
 
 .react-flow__node-configuredNode {
@@ -113,11 +128,26 @@ body {
   font-weight: 500;
   letter-spacing: -0.2px;
   font-size: 10px;
-  background: #eee;
-  border: 3px solid #d3d300;
-  color: #d3d300;
+  background: #000000;
+  border: 1px solid transparent;
+  border-radius: 25px;
+  background: linear-gradient(rgb(0, 0, 0), rgb(0, 0, 0)) padding-box,
+              linear-gradient(to right, #f7f7ab, #d3d300) border-box;
+  color: #ffffff;
   border-radius: 15px;
   text-align: center;
+}
+
+.react-flow__node-configuredNode::before {
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  width: 30px;
+  height: 30px;
+  border-radius: 25px;
+  border: 1px solid #d3d300;
+  background: #000000;
+  content: "";
 }
 
 .react-flow__node-successNode {
@@ -128,11 +158,26 @@ body {
   font-weight: 500;
   letter-spacing: -0.2px;
   font-size: 10px;
-  background: #eee;
-  border: 3px solid #009f0b;
-  color: #009f0b;
+  background: #000000;
+  border: 1px solid transparent;
+  border-radius: 25px;
+  background: linear-gradient(rgb(0, 0, 0), rgb(0, 0, 0)) padding-box,
+              linear-gradient(to right, #b1f6b5, #009f0b) border-box;
+  color: #f4f4f4;
   border-radius: 15px;
   text-align: center;
+}
+
+.react-flow__node-successNode::before {
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  width: 30px;
+  height: 30px;
+  border-radius: 25px;
+  border: 1px solid #009f0b;
+  background: #000000;
+  content: "";
 }
 
 .react-flow__node-failNode {
@@ -143,9 +188,34 @@ body {
   font-weight: 500;
   letter-spacing: -0.2px;
   font-size: 10px;
-  background: #eee;
-  border: 3px solid #cb0000;
-  color: #cb0000;
+  background: #000000;
+  border: 1px solid transparent;
+  border-radius: 25px;
+  background: linear-gradient(rgb(0, 0, 0), rgb(0, 0, 0)) padding-box,
+              linear-gradient(to right, #fca6a6, #cb0000) border-box;
+  color: #ffffff;
   border-radius: 15px;
   text-align: center;
+}
+
+.react-flow__node-failNode::before {
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  width: 30px;
+  height: 30px;
+  border-radius: 25px;
+  border: 1px solid #cb0000;
+  background: #000000;
+  content: "";
+}
+
+.transform-card {
+  width: 12rem;
+  height: 3rem;
+  border: 1px solid gray;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
 }

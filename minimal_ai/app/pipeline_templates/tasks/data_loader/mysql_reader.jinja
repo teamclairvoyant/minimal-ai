@@ -1,0 +1,30 @@
+import functools
+
+from pyspark.sql import DataFrame, SparkSession
+
+from minimal_ai.app.utils import clean_name
+
+DB_MYSQL_URL = "jdbc:mysql://{{ host }}:{{ port }}/{{ database }}"
+
+
+def {{ task_uuid }}(spark: SparkSession) -> DataFrame:
+
+    df = spark.read.options({{ options }}).jdbc(
+        url=DB_MYSQL_URL,
+        table="{{ table }}",
+        properties={
+            "user": "{{ user }}",
+            "password": "{{ password }}"
+        },
+        )
+
+    df = functools.reduce(
+        lambda df, idx: df.withColumnRenamed(
+            list(df.schema.names)[idx],
+            clean_name(list(df.schema.names)[idx]) + "_{{ task_uuid }}",
+        ),
+        range(len(list(df.schema.names))),
+        df,
+    )
+
+    return df

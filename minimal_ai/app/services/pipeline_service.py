@@ -28,7 +28,9 @@ class PipelineService:
         Returns:
             Dict: created pipeline object
         """
-        pipeline = Pipeline.create(name, executor_type, executor_config, description)
+        pipeline = await Pipeline.create(
+            name, executor_type, executor_config, description
+        )
         logger.info("Pipeline - %s created", name)
         return await pipeline.pipeline_summary()
 
@@ -160,4 +162,4 @@ class PipelineService:
             pipeline_uuid, cron_time, PipelineService.scheduled_execution
         )
         pipeline.scheduled = True
-        pipeline.save()
+        await pipeline.save()

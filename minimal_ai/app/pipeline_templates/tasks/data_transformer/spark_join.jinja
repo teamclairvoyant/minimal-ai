@@ -1,0 +1,15 @@
+from pyspark.sql import DataFrame, SparkSession
+
+
+def {{ task_uuid }}(spark: SparkSession, {{ left_df }}: DataFrame, {{ right_df }}: DataFrame) -> DataFrame:
+
+    df = {{ left_df }}.join(
+        {{ right_df }},
+        on=[{{ on }}],
+        how="{{ how }}"
+        ){% if where %}.filter("{{ where }}"){% endif %}
+
+
+    df = df.select({{ select_expression }})
+
+    return df

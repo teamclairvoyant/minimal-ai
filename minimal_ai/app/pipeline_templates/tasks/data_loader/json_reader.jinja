@@ -1,0 +1,37 @@
+import functools
+import json
+
+from pyspark.sql import DataFrame, SparkSession
+
+from minimal_ai.app.utils import clean_name
+
+
+def {{ task_uuid }}(spark: SparkSession) -> DataFrame:
+{% if system %}
+{% if system == "gcp" %}
+    spark._jsc.hadoopConfiguration().set(  # type: ignore
+        "fs.gs.impl", "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem"
+    )
+{% else %}
+    spark._jsc.hadoopConfiguration().set(  # type: ignore
+        "fs.gs.impl", "com.google.cloud.hadoop.fs.gcs.AWSFileSystem"
+    )
+{% endif %}
+{% endif %}
+    with open("{{ file_path }}", mode="r") as fp:
+        json_data = json.loads(fp.read())
+
+    df = spark.read.options({{ options }}).json(
+        spark.sparkContext.parallelize(json_data)
+    )
+
+    df = functools.reduce(
+        lambda df, idx: df.withColumnRenamed(
+            list(df.schema.names)[idx],
+            clean_name(list(df.schema.names)[idx]) + "_{{ task_uuid }}",
+        ),
+        range(len(list(df.schema.names))),
+        df,
+    )
+
+    return df

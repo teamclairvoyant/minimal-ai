@@ -1,5 +1,24 @@
-import { Form, Input } from "antd";
+import { Form, Input, Select } from "antd";
 import propTypes from "prop-types";
+
+const WriteMode = [
+  {
+    label: "APPEND",
+    value: "append",
+  },
+  {
+    label: "OVERWRITE",
+    value: "overwrite",
+  },
+  {
+    label: "IGNORE",
+    value: "ignore",
+  },
+  {
+    label: "ERROR",
+    value: "errorifexists",
+  },
+];
 
 RdbmsConfigForm.propTypes = {
   currTask: propTypes.object,
@@ -92,6 +111,26 @@ function RdbmsConfigForm({ currTask }) {
       >
         <Input placeholder="tablename" />
       </Form.Item>
+      {currTask.task_type === "data_sink" && (
+        <Form.Item
+          label="Write Mode"
+          name="mode"
+          tooltip="Select the write mode"
+          hasFeedback
+          rules={[
+            {
+              required: true,
+              message: "Select the write mode",
+            },
+          ]}
+        >
+          <Select
+            placeholder="mode"
+            optionFilterProp="children"
+            options={WriteMode}
+          />
+        </Form.Item>
+      )}
     </>
   );
 }

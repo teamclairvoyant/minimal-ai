@@ -41,6 +41,7 @@ class TaskStatus(str, Enum):
     FAILED = "failed"
     DRAFT = "draft"
     CONFIGURED = "configured"
+    RUNNING = "running"
 
 
 class PipelineType(str, Enum):
@@ -110,7 +111,7 @@ class LoaderType(str, Enum):
     LOCAL_FILE = "local_file"
     GCP_BUCKET = "gcp_bucket"
     S3_FILE = "s3_file"
-    MYSQL = "mysql"
+    WAREHOUSE = "warehouse"
     BIGQUERY = "bigquery"
 
 
@@ -131,7 +132,7 @@ class TransformerType(str, Enum):
     UNION = "union"
     PIVOT = "pivot"
     FILTER = "filter"
-    SPARKAI = "sparkAI"
+    CUSTOMSQL = "customsql"
 
 
 class JoinModel(BaseModel):
@@ -139,15 +140,22 @@ class JoinModel(BaseModel):
 
     left_table: str
     right_table: str
-    left_on: List[str]
-    right_on: List[str]
+    on: str
     how: str
+    target_columns: dict[Any, Any]
+    where: str | None = None
 
 
 class FilterModel(BaseModel):
     """properties for filter transformer"""
 
     filter: str
+
+
+class CustomSql(BaseModel):
+    """properties for custom sql"""
+
+    query: str
 
 
 class PivotModel(BaseModel):
@@ -162,27 +170,29 @@ class TaskUpdateModel(BaseModel):
     """properties of task to be updated"""
 
     upstream_task_uuids: List[str] | None = None
-    config_type: str | None = None
     config_properties: Dict[str, Any] | None = None
 
 
 class DBConfig(BaseModel):
     """properties for the mysql connection"""
 
+    type: str
     host: str
     port: str
     user: str
     password: str
     database: str
     table: str
-    ingestion_type: str | None = None
+    extras: str | None = None
+    mode: str | None = None
 
 
 class FileConfig(BaseModel):
     """properties for file type configurations"""
 
-    file_type: str
+    type: str
     file_path: str
+    extras: str | None = None
     mode: str | None = None
 
 

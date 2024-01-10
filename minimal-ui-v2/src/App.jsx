@@ -1,18 +1,18 @@
-import Router from './routes'
-import {ConfigProvider, theme} from 'antd'
+import { ConfigProvider, message, theme } from "antd";
+import Router from "./routes";
 
 function App() {
+  const [, contextHolder] = message.useMessage();
   return (
     <ConfigProvider
-    theme={{
-      algorithm: theme.darkAlgorithm,
-
-    }}
+      theme={{
+        algorithm: theme.darkAlgorithm,
+      }}
     >
-      <Router/>
+      {contextHolder}
+      <Router />
     </ConfigProvider>
-    
-  )
+  );
 }
 
-export default App
+export default App;

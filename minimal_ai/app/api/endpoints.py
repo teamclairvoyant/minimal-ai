@@ -4,9 +4,8 @@ import psutil
 from fastapi import APIRouter, Request, status
 from fastapi.responses import JSONResponse
 
-from minimal_ai.app.entity import PipelineExecutionEntity
+# from minimal_ai.app.entity import PipelineExecutionEntity
 from minimal_ai.app.services.database import transaction
-from minimal_ai.app.services.minimal_exception import MinimalETLException
 from minimal_ai.app.services.pipeline_service import PipelineService
 from minimal_ai.app.services.task_service import TaskService
 from minimal_ai.app.utils.constants import (
@@ -40,130 +39,6 @@ async def cpu_ram_info() -> JSONResponse:
         )
 
 
-@api_router.get("/pipelines_summary")
-async def pipelines_summary() -> JSONResponse:
-    """endpoint to fetch pipelines_summary"""
-    try:
-        logger.info("GET /pipelines_summary")
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "pipelines": [
-                    {
-                        "uuid": "test1",
-                        "name": "test1",
-                        "schedule_status": "2023-08-31",
-                        "total_runs": 12,
-                        "success_count": 10,
-                        "fail_count": 2,
-                    },
-                    {
-                        "uuid": "test12",
-                        "name": "test12",
-                        "schedule_status": "2023-08-31",
-                        "total_runs": 12,
-                        "success_count": 10,
-                        "fail_count": 2,
-                    },
-                    {
-                        "uuid": "test13",
-                        "name": "test13",
-                        "schedule_status": "2023-08-31",
-                        "total_runs": 12,
-                        "success_count": 10,
-                        "fail_count": 2,
-                    },
-                    {
-                        "uuid": "test14",
-                        "name": "test14",
-                        "schedule_status": "2023-08-31",
-                        "total_runs": 12,
-                        "success_count": 10,
-                        "fail_count": 2,
-                    },
-                    {
-                        "uuid": "test15",
-                        "name": "test15",
-                        "schedule_status": "2023-08-31",
-                        "total_runs": 12,
-                        "success_count": 10,
-                        "fail_count": 2,
-                    },
-                    {
-                        "uuid": "test16",
-                        "name": "test16",
-                        "schedule_status": "2023-08-31",
-                        "total_runs": 12,
-                        "success_count": 10,
-                        "fail_count": 2,
-                    },
-                    {
-                        "uuid": "test17",
-                        "name": "test17",
-                        "schedule_status": "2023-08-31",
-                        "total_runs": 12,
-                        "success_count": 10,
-                        "fail_count": 2,
-                    },
-                    {
-                        "uuid": "test18",
-                        "name": "test18",
-                        "schedule_status": "2023-08-31",
-                        "total_runs": 12,
-                        "success_count": 10,
-                        "fail_count": 2,
-                    },
-                    {
-                        "uuid": "test19",
-                        "name": "test19",
-                        "schedule_status": "2023-08-31",
-                        "total_runs": 12,
-                        "success_count": 10,
-                        "fail_count": 2,
-                    },
-                    {
-                        "uuid": "test20",
-                        "name": "test20",
-                        "schedule_status": "2023-08-31",
-                        "total_runs": 12,
-                        "success_count": 10,
-                        "fail_count": 2,
-                    },
-                    {
-                        "uuid": "test21",
-                        "name": "test21",
-                        "schedule_status": "2023-08-31",
-                        "total_runs": 12,
-                        "success_count": 10,
-                        "fail_count": 2,
-                    },
-                ]
-            },
-        )
-    except MinimalETLException as excep:
-        logger.error("GET /pipelines_summary - %s", excep.args)
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND, content={"error": excep.args}
-        )
-
-
-@api_router.get("/test")
-async def test_api():
-    """test endpoint"""
-    try:
-        logger.info("GET /test")
-        async with transaction():
-            repo = PipelineExecutionEntity()
-            item = await repo.update(key="id", value=1, payload={"status": "CANCELLED"})
-            logger.info(item)
-        return JSONResponse(status_code=status.HTTP_200_OK, content={"ok": "ok"})
-    except MinimalETLException as excep:
-        logger.error("GET /summary - %s", excep.args)
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND, content={"error": excep.args}
-        )
-
-
 @api_router.get("/summary")
 async def get_summary() -> JSONResponse:
     """endpoint to fetch summary"""
@@ -173,7 +48,7 @@ async def get_summary() -> JSONResponse:
             status_code=status.HTTP_200_OK,
             content={"summary": await PipelineService.get_pipelines_summary()},
         )
-    except MinimalETLException as excep:
+    except Exception as excep:
         logger.error("GET /summary - %s", excep.args)
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND, content={"error": excep.args}
@@ -195,7 +70,7 @@ async def get_pipeline_by_uuid(uuid: str) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_200_OK, content={"pipeline": pipeline}
         )
-    except MinimalETLException as excep:
+    except Exception as excep:
         logger.error("GET /pipeline/%s %s", uuid, excep.args)
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND, content={"error": excep.args}
@@ -217,7 +92,7 @@ async def delete_pipeline(uuid: str) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_200_OK, content={"pipeline": pipeline}
         )
-    except MinimalETLException as excep:
+    except Exception as excep:
         logger.error("DELETE /pipeline/%s %s", uuid, excep.args)
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND, content={"error": excep.args}
@@ -234,7 +109,7 @@ async def get_pipeline_list() -> JSONResponse:
             status_code=status.HTTP_200_OK, content={"pipelines": pipelines}
         )
 
-    except MinimalETLException as excep:
+    except Exception as excep:
         logger.error("GET /pipelines %s", excep.args)
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND, content={"error": excep.args}
@@ -261,7 +136,7 @@ async def add_pipeline(pipeline_config: PipelineModel) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_201_CREATED, content={"pipeline": pipeline}
         )
-    except MinimalETLException as excep:
+    except Exception as excep:
         logger.error("POST /pipeline %s", pipeline_config)
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT, content={"error": excep.args}
@@ -284,7 +159,7 @@ async def update_pipeline(
         return JSONResponse(
             status_code=status.HTTP_201_CREATED, content={"pipeline": pipeline}
         )
-    except MinimalETLException as excep:
+    except Exception as excep:
         logger.error("PUT /pipeline/%s", uuid)
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT, content={"error": excep.args}
@@ -305,7 +180,7 @@ async def add_task(uuid: str, task_config: TaskModel) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_201_CREATED, content={"pipeline": task}
         )
-    except MinimalETLException as excep:
+    except Exception as excep:
         logger.error("POST /pipeline/%s/task %s", uuid, excep.args)
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT, content={"error": excep.args}
@@ -325,7 +200,7 @@ async def get_task_by_uuid(pipeline_uuid: str, task_uuid: str) -> JSONResponse:
         task = await TaskService.get_task(pipeline_uuid, task_uuid)
         return JSONResponse(status_code=status.HTTP_200_OK, content={"task": task})
 
-    except MinimalETLException as excep:
+    except Exception as excep:
         logger.error(
             "GET /pipeline/%s/task/%s %s", pipeline_uuid, task_uuid, excep.args
         )
@@ -347,7 +222,7 @@ async def get_schema_by_task(pipeline_uuid: str, task_uuid: str) -> JSONResponse
         task_schema = await TaskService.get_schema(pipeline_uuid, task_uuid)
         return JSONResponse(status_code=status.HTTP_200_OK, content=task_schema)
 
-    except MinimalETLException as excep:
+    except Exception as excep:
         logger.error(
             "GET /pipeline/%s/task/%s/schema %s", pipeline_uuid, task_uuid, excep.args
         )
@@ -370,15 +245,17 @@ async def get_all_tasks_by_pipeline(uuid: str) -> JSONResponse:
             status_code=status.HTTP_200_OK, content={"pipeline": uuid, "tasks": tasks}
         )
 
-    except MinimalETLException as excep:
+    except Exception as excep:
         logger.error("GET /pipeline/%s/tasks %s", uuid, excep.args)
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT, content={"error": excep.args}
         )
 
 
-@api_router.get("/sample_data")
-async def get_sample_records(pipeline_uuid: str, task_uuid: str) -> JSONResponse:
+@api_router.get("/pipeline/{pipeline_uuid}/task/{task_uuid}/sample_data")
+async def get_sample_records(
+    pipeline_uuid: str, task_uuid: str, schema: bool = False
+) -> JSONResponse:
     """endpoint to get sample records from executed task
 
     Args:
@@ -389,7 +266,7 @@ async def get_sample_records(pipeline_uuid: str, task_uuid: str) -> JSONResponse
         logger.info(
             "GET /sample_data - pipeline %s - task %s", pipeline_uuid, task_uuid
         )
-        data = await TaskService.get_sample_records(pipeline_uuid, task_uuid)
+        data = await TaskService.get_sample_records(pipeline_uuid, task_uuid, schema)
 
         return JSONResponse(status_code=status.HTTP_200_OK, content=data)
     except Exception as excep:
@@ -427,7 +304,7 @@ async def update_task(
             status_code=status.HTTP_200_OK, content={"pipeline": pipeline}
         )
 
-    except MinimalETLException as excep:
+    except Exception as excep:
         logger.error(
             "PUT /pipeline/%s/task/%s | %s", pipeline_uuid, task_uuid, excep.args
         )
@@ -456,7 +333,7 @@ async def add_column(
             status_code=status.HTTP_200_OK, content={"pipeline": pipeline}
         )
 
-    except MinimalETLException as excep:
+    except Exception as excep:
         logger.error(
             "PUT /pipeline/%s/task/%s/addColumn | %s",
             pipeline_uuid,
@@ -483,7 +360,7 @@ async def delete_task(pipeline_uuid: str, task_uuid: str) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_200_OK, content={"pipeline": pipeline}
         )
-    except MinimalETLException as excep:
+    except Exception as excep:
         logger.error(
             "DELETE /pipeline/%s/task/%s | %s", pipeline_uuid, task_uuid, excep.args
         )
@@ -508,8 +385,33 @@ async def execute_pipeline(pipeline_uuid: str) -> JSONResponse:
             status_code=status.HTTP_200_OK, content={"pipeline": pipeline}
         )
 
-    except MinimalETLException as excep:
+    except Exception as excep:
         logger.error("/pipeline/%s/execute | %s", pipeline_uuid, excep.args)
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT, content={"error": excep.args}
+        )
+
+
+@api_router.get("/pipeline/{pipeline_uuid}/task/{task_uuid}/execute")
+async def execute_task(pipeline_uuid: str, task_uuid: str) -> JSONResponse:
+    """endpoint to execute task of a pipeline
+
+    Args:
+        pipeline_uuid (str): uuid of the pipeline
+        task_uuid (str): uuid of the task
+
+    """
+    try:
+        logger.info("executing task - %s", task_uuid)
+        async with transaction():
+            pipeline = await TaskService.execute_task_by_uuid(pipeline_uuid, task_uuid)
+        return JSONResponse(
+            status_code=status.HTTP_200_OK, content={"pipeline": pipeline}
+        )
+    except Exception as excep:
+        logger.error(
+            "/pipeline/%s/task/%s/execute | %s", pipeline_uuid, task_uuid, excep.args
+        )
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT, content={"error": excep.args}
         )
@@ -530,7 +432,7 @@ async def schedule_job(pipeline_uuid: str, cron_time: CronModel):
         return JSONResponse(
             status_code=status.HTTP_200_OK, content={"status": "scheduled"}
         )
-    except MinimalETLException as excep:
+    except Exception as excep:
         logger.error("GET /pipeline/%s/schedule", pipeline_uuid)
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT, content={"error": excep.args}

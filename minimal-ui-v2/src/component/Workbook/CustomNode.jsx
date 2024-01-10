@@ -18,15 +18,26 @@ const CustomNode = memo(({ data }) => {
       )}
       <Flex align="center">
         <Flex
-          style={{ padding: "1rem 0 1rem 1rem", height: "100%", width: "100%" }}
+          style={{
+            padding: "1rem 1rem 1rem 1rem",
+            height: "100%",
+            width: "100%",
+          }}
           align="center"
         >
-          <Typography style={{ color: "black", fontSize: 20 }}>
+          <Typography style={{ color: "white", fontSize: 20 }}>
             {data.title}
           </Typography>
         </Flex>
-        <Flex style={{ padding: "0 1rem 0 1rem" }} align="center">
-          <Icon icon={data.icon} width={30}></Icon>
+        <Flex
+          style={{
+            position: "absolute",
+            top: "-9px",
+            right: "-9px",
+          }}
+          align="center"
+        >
+          <Icon icon={data.icon} width={20}></Icon>
         </Flex>
       </Flex>
 

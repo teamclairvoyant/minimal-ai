@@ -35,29 +35,13 @@ class _Task(ABC):
                 break
         return _executed
 
-    @property
+    @abstractmethod
     def is_configured(self) -> bool:
         """method to check if task is configured
 
         Returns:
             bool: True/False
         """
-        if (
-            self.config
-            and (self.config and self.config["_type"] is not None)
-            and (self.config and self.config["properties"] is not None)
-        ):
-            return True
-        return False
-
-    @property
-    async def records(self) -> list:
-        """sample records from the task"""
-        if self.status == "executed":
-            return await self.pipeline.variable_manager.get_variable_data(self.uuid)
-        raise MinimalETLException(
-            "Sample records not loaded. Execute the task to load the data"
-        )
 
     @classmethod
     @abstractmethod
@@ -127,6 +111,12 @@ class _Task(ABC):
                         f"Task - {task_uuid} not defined in pipeline - {self.pipeline.uuid}"
                     )
                 self.pipeline.tasks[task_uuid]["downstream_tasks"].append(self.uuid)
+                # if self.pipeline.tasks[task_uuid]["task_type"] == "data_loader":
+                #     self.config["source"] = task_uuid
+                # else:
+                #     self.config["source"] = self.pipeline.tasks[task_uuid]["config"][
+                #         "source"
+                #     ]
                 await self.pipeline.add_edge_reactflow_props(self.uuid, task_uuid)
 
         if remove_from_task_uuids:
@@ -143,6 +133,15 @@ class _Task(ABC):
                     )
                 self.pipeline.tasks[task_uuid]["downstream_tasks"].remove(self.uuid)
 
+    async def records(self) -> dict:
+        """sample records from the task"""
+        if self.status == "executed":
+            return await self.pipeline.variable_manager.get_variable_data(self.uuid)
+
+        raise MinimalETLException(
+            "Sample records not loaded. Execute the task to load the data"
+        )
+
     async def base_dict_obj(self) -> dict:
         """method to get task dict object"""
         return {
@@ -150,7 +149,7 @@ class _Task(ABC):
             "name": self.name,
             "status": self.status,
             "task_type": self.task_type,
-            "configured": self.is_configured,
+            "configured": self.is_configured(),
             "config": self.config,
             "upstream_tasks": self.upstream_tasks,
             "downstream_tasks": self.downstream_tasks,

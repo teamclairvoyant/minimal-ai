@@ -16,10 +16,30 @@ const FileType = [
   },
 ];
 
+const WriteMode = [
+  {
+    label: "APPEND",
+    value: "append",
+  },
+  {
+    label: "OVERWRITE",
+    value: "overwrite",
+  },
+  {
+    label: "IGNORE",
+    value: "ignore",
+  },
+  {
+    label: "ERROR",
+    value: "errorifexists",
+  },
+];
+
 FileConfigForm.propTypes = {
   currTask: propTypes.object,
 };
 function FileConfigForm({ currTask }) {
+  console.log("kjbkbjhbvj");
   return (
     <>
       <Form.Item
@@ -54,6 +74,26 @@ function FileConfigForm({ currTask }) {
       >
         <Input placeholder="File path" />
       </Form.Item>
+      {currTask.task_type === "data_sink" && (
+        <Form.Item
+          label="Write Mode"
+          name="mode"
+          tooltip="Select the write mode"
+          hasFeedback
+          rules={[
+            {
+              required: true,
+              message: "Select the write mode",
+            },
+          ]}
+        >
+          <Select
+            placeholder="overwrite"
+            optionFilterProp="children"
+            options={WriteMode}
+          />
+        </Form.Item>
+      )}
     </>
   );
 }

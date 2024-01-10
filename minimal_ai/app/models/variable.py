@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import pickle
-from typing import Any, List
+from typing import Any
 
 import aiofiles
 from pydantic.dataclasses import dataclass
@@ -30,28 +30,39 @@ class VariableManager:
         return VariableManager(variables_dir=variables_dir)
 
     async def add_variable(
-        self, pipeline_uuid: str, task_uuid: str, variable_uuid: str, data: Any
+        self,
+        pipeline_uuid: str,
+        task_uuid: str,
+        variable_uuid: str,
+        schema: dict[Any, Any],
+        count: int,
+        data: Any,
     ) -> None:
         """
         method to add variable and store data
         Args:
-            pipeline_uuid (): uuid of the pipeline
-            task_uuid (): uuid of the task
-            variable_uuid (): uuid of the variable
-            data (): dataframe
-            data_schema (StructType): type of the variable
+            pipeline_uuid (str): uuid of the pipeline
+            task_uuid (str): uuid of the task
+            variable_uuid (str): uuid of the variable
+            data (Any): dataframe
+            data_schema (Dict[Any,Any]): type of the variable
 
         """
-        variable = Variable(
-            uuid=clean_name(variable_uuid),
-            pipeline_uuid=pipeline_uuid,
-            task_uuid=task_uuid,
-            data=data,
-        )
-        # Delete data if it exists
-        variable.delete(self.variables_dir)
+        try:
+            variable = Variable(
+                uuid=clean_name(variable_uuid),
+                pipeline_uuid=pipeline_uuid,
+                task_uuid=task_uuid,
+                schema=schema,
+                count=count,
+                data=data,
+            )
+            # Delete data if it exists
+            variable.delete(self.variables_dir)
 
-        variable.save(self.variables_dir)
+            variable.save(self.variables_dir)
+        except Exception as excep:
+            logger.error(excep)
 
     async def delete_variable(self, variable_uuid: str) -> None:
         """
@@ -66,7 +77,7 @@ class VariableManager:
 
         variable.delete(self.variables_dir)
 
-    async def get_variable_data(self, variable_uuid: str) -> List:
+    async def get_variable_data(self, variable_uuid: str) -> dict[Any, Any]:
         """
         method to get variable object
         Args:
@@ -74,14 +85,18 @@ class VariableManager:
             sample_count (int): number of rows of the dataframe
 
         """
-        logger.info("Getting sample records task - %s", variable_uuid)
+        logger.info("Getting sample records for - %s", variable_uuid)
         variable = await Variable.get(self.variables_dir, variable_uuid)
 
         if not variable:
             logger.error("Variable - %s not loaded properly", variable_uuid)
             raise MinimalETLException(f"Variable - {variable_uuid} not loaded properly")
 
-        return [json.loads(i) for i in variable.data]
+        return {
+            "columns": variable.schema,
+            "data": [json.loads(i) for i in variable.data],
+            "count": variable.count,
+        }
 
 
 class Config:
@@ -93,6 +108,8 @@ class Variable:
     uuid: str
     pipeline_uuid: str
     task_uuid: str
+    schema: dict[Any, Any]
+    count: int
     data: Any
 
     @classmethod
