@@ -1,4 +1,5 @@
 from .constants import (
+    AggModel,
     BigQueryConfig,
     CustomSql,
     DBConfig,

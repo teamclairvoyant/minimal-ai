@@ -116,17 +116,30 @@ class PipelineService:
         Args:
             pipeline_uuid (str): uuid of the pipeline
         """
-        pipeline = Pipeline.get_pipeline(pipeline_uuid)
-        root_tasks = []
-        logger.info("Loading data sources...")
+        pipeline: Pipeline = Pipeline.get_pipeline(pipeline_uuid)
+        # root_tasks = []
+        # logger.info("Loading data sources...")
 
-        for task in pipeline.tasks:
-            if pipeline.tasks[task]["task_type"] == TaskType.DATA_LOADER:
-                root_tasks.append(task)
+        # for task in pipeline.tasks:
+        #     if pipeline.tasks[task]["task_type"] == TaskType.DATA_LOADER:
+        #         root_tasks.append(task)
 
-        exec_data = await pipeline.execute(root_tasks)
+        # exec_data = await pipeline.execute(root_tasks)
+        import importlib.util
+        import os
+        import sys
 
-        return exec_data
+        sys.path.append(pipeline.config_dir)
+        spec = importlib.util.spec_from_file_location(
+            "main", os.path.join(pipeline.config_dir, "main.py")
+        )
+        if spec and spec.loader:
+            func = importlib.util.module_from_spec(spec)
+            sys.modules["main"] = func
+            spec.loader.exec_module(func)
+            func.main()
+
+        return {"status": "success"}
 
     @staticmethod
     def scheduled_execution(pipeline_uuid: str):

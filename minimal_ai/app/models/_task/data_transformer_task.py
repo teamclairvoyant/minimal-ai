@@ -119,6 +119,10 @@ class DataTransformerTask(_Task):
                         if self.config["properties"]["where"]
                         else "",
                     )
+
+                case "aggregate":
+                    pass
+
                 case _:
                     logger.error("Not implemented yet")
 
@@ -157,6 +161,16 @@ class DataTransformerTask(_Task):
                     self.upstream_tasks.insert(
                         0, self.config["properties"]["left_table"]
                     )
+
+                case "aggregate":
+                    _config = AggModel.model_validate(transformer_config)
+                    logger.info(
+                        "Configuring %s transformer for task - %s",
+                        transformer.value,
+                        self.uuid,
+                    )
+                    self.config["type"] = transformer
+                    self.config["properties"] = _config.model_dump()
 
                 case "filter":
                     logger.info(

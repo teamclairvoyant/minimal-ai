@@ -133,6 +133,7 @@ class TransformerType(str, Enum):
     PIVOT = "pivot"
     FILTER = "filter"
     CUSTOMSQL = "customsql"
+    AGGREGATE = "aggregate"
 
 
 class JoinModel(BaseModel):
@@ -144,6 +145,13 @@ class JoinModel(BaseModel):
     how: str
     target_columns: dict[Any, Any]
     where: str | None = None
+
+
+class AggModel(BaseModel):
+    """properties for aggregate type transformer"""
+
+    target_columns: dict[str, str]
+    groupby_columns: dict[str, str]
 
 
 class FilterModel(BaseModel):

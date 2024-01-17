@@ -81,9 +81,7 @@ class Pipeline:
         """
         path to config file for the pipeline
         """
-        return os.path.join(
-            settings.MINIMAL_AI_REPO_PATH, settings.PIPELINES_DIR, self.uuid
-        )
+        return os.path.join(settings.PIPELINES_DIR, self.uuid)
 
     @property
     def variable_dir(self):
